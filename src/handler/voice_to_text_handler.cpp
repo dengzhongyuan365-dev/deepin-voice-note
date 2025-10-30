@@ -12,6 +12,7 @@
 #include "common/vnotea2tmanager.h"
 #include "common/jscontent.h"
 #include "opsstateinterface.h"
+#include "common/vtextspeechandtrmanager.h"
 
 /**
  * @class VoiceToTextHandler
@@ -32,6 +33,20 @@ void VoiceToTextHandler::setAudioToText(const QSharedPointer<VNVoiceBlock> &voic
     m_voiceBlock = voiceBlock;
     if (!m_voiceBlock) {
         qWarning() << "Voice block is null";
+        return;
+    }
+
+    // 检查UOS AI是否可用
+    auto speechManager = VTextSpeechAndTrManager::instance();
+    // 确保UOS AI状态已初始化
+    speechManager->checkUosAiExists();
+    auto status = speechManager->status();
+    if (!speechManager->valid()) {
+        qWarning() << "UOS AI not available, status:" << status;
+        QString errString = speechManager->errorString(status);
+        if (!errString.isEmpty()) {
+            Q_EMIT uosAiNotAvailable(errString, status);
+        }
         return;
     }
 

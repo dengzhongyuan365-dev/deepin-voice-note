@@ -10,6 +10,7 @@
 
 class VNVoiceBlock;
 class VNoteA2TManager;
+class VTextSpeechAndTrManager;
 
 class VoiceToTextHandler : public QObject
 {
@@ -21,6 +22,7 @@ public:
 
     Q_SIGNAL void audioLengthLimit();
     Q_SIGNAL void noNetworkConnection();
+    Q_SIGNAL void uosAiNotAvailable(const QString &message, int status);
 
 private:
     void onA2TStart();

@@ -315,7 +315,17 @@ Item {
                         title.isPlaying = isPlay;
                     }
                     onPopupToast: (message, msgId) => {
-                        DTK.sendMessage(webView, message, "icon_warning", 4000, msgId);
+                        // 在MIPS架构上可能存在定时器问题，添加手动关闭机制
+                        var toast = DTK.sendMessage(webView, message, "icon_warning", 4000, msgId);
+                        
+                        // 添加备用定时器确保toast会关闭
+                        var backupTimer = Qt.createQmlObject('import QtQuick 2.0; Timer {interval: 5000; repeat: false; running: true;}', webView);
+                        backupTimer.triggered.connect(function() {
+                            if (toast && typeof toast.close === "function") {
+                                toast.close();
+                            }
+                            backupTimer.destroy();
+                        });
                     }
                     onRequesetCallJsSynchronous: func => {
                         webView.runJavaScript(func, function (result) {

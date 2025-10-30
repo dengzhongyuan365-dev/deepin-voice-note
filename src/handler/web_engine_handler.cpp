@@ -89,6 +89,9 @@ WebEngineHandler::WebEngineHandler(QObject *parent)
     connect(m_voiceToTextHandler, &VoiceToTextHandler::noNetworkConnection, this, [this]() {
             Q_EMIT requestMessageDialog(VNoteMessageDialogHandler::NoNetwork);
     });
+    connect(m_voiceToTextHandler, &VoiceToTextHandler::uosAiNotAvailable, this, [this](const QString &message, int status) {
+        Q_EMIT popupToast(message, status);
+    });
     connect(m_voicePlayerHandler, &VoicePlayerHandler::playStatusChanged, this, [=](VoicePlayerHandler::PlayState state){
         if (state == VoicePlayerHandler::PlayState::End) {
             Q_EMIT playingVoice(false);
