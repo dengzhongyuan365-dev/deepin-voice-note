@@ -71,7 +71,9 @@ void ActionManager::initMenu()
 
     // VoiceCtxMenu 初始化语音文本右键菜单
     makeAction(VoiceAsSave, QCoreApplication::translate("NoteDetailContextMenu", "Save as MP3"));
+#ifndef DISABLE_VOICE_FEATURES
     makeAction(VoiceToText, QCoreApplication::translate("NoteDetailContextMenu", "Voice to Text"));
+#endif
     makeAction(VoiceDelete, QCoreApplication::translate("NoteDetailContextMenu", "Delete"));
     makeAction(VoiceSelectAll, QCoreApplication::translate("NoteDetailContextMenu", "Select all"));
     makeAction(VoiceCopy, QCoreApplication::translate("NoteDetailContextMenu", "Copy"));
@@ -93,10 +95,12 @@ void ActionManager::initMenu()
     makeAction(TxtCopy, QCoreApplication::translate("NoteDetailContextMenu", "Copy"));
     makeAction(TxtCut, QCoreApplication::translate("NoteDetailContextMenu", "Cut"));
     makeAction(TxtPaste, QCoreApplication::translate("NoteDetailContextMenu", "Paste"));
+#ifndef DISABLE_VOICE_FEATURES
     makeAction(TxtSeparator, {}, MenuSeparatorComponent);
     makeAction(TxtSpeech, QCoreApplication::translate("NoteDetailContextMenu", "Text to Speech"));
     makeAction(TxtStopreading, QCoreApplication::translate("NoteDetailContextMenu", "Stop reading"));
     makeAction(TxtDictation, QCoreApplication::translate("NoteDetailContextMenu", "Speech to Text"));
+#endif
     // makeAction(TxtTranslate, QCoreApplication::translate("NoteDetailContextMenu", "Translate"));
 
     qInfo() << "Menu initialization finished";
@@ -199,11 +203,17 @@ void ActionManager::resetCtxMenu(MenuType type, bool enable)
 void ActionManager::visibleAiActions(bool visible)
 {
     qDebug() << "Setting AI actions visibility to:" << visible;
+    
+#ifndef DISABLE_VOICE_FEATURES
     visibleAction(VoiceToText, visible);
     visibleAction(TxtSpeech, visible);
     visibleAction(TxtStopreading, visible);
     visibleAction(TxtDictation, visible);
     visibleAction(TxtSeparator, visible);
+#else
+    qInfo() << "AI actions disabled on MIPS/SW64 platform";
+#endif
+    
     qInfo() << "AI actions visibility setting finished";
 }
 

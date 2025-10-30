@@ -8,6 +8,11 @@
 
 #define DEEPIN_VOICE_NOTE "deepin-voice-note"
 
+// 架构相关定义
+#if defined(__mips__) || defined(__mips64) || defined(__sw_64__) || defined(__sw_64)
+#define DISABLE_VOICE_FEATURES
+#endif
+
 //Default main window size
 #define DEFAULT_WINDOWS_WIDTH 980
 #define DEFAULT_WINDOWS_HEIGHT 634
