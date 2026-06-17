@@ -1,3 +1,16 @@
+deepin-voice-note (6.5.60) unstable; urgency=medium
+
+  * fix(vnote): keep move dialog item states consistent
+  * fix(vnote): focus rich text editor after creating blank note
+  * fix(vnote): keep copied images visible and viewable
+  * fix(shortcut): disable Ctrl+S for empty notes
+  * fix(vnote): disable note operations during voice-to-text
+  * fix(editor): allow Enter newline while recording
+  * fix(ui): fix settings dialog always-on-top and reduce clipboard log noise
+  * fix(dbus): preserve maximized state when restoring from minimize
+
+ -- dengzhongyuan <dengzhongyuan@uniontech.com>  Wed, 17 Jun 2026 14:03:55 +0800
+
 deepin-voice-note (6.5.59) unstable; urgency=medium
 
   * fix(ui): add missing scrollbar to note list view
