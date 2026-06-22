@@ -63,6 +63,8 @@ Item {
         }
         lastDropIndex = -1;
         currentDropIndex = -1;
+        folderListView.hoverIndex = -1;
+        hideScrollHintLine();
     }
 
     function getCurrentFolder() {
@@ -98,12 +100,16 @@ Item {
             return;
         if (folderListView.contentY < folderListView.bottomContentY()) {
             scrollTimer.isUp = false;
+            showScrollHintLine(false);
             scrollTimer.running = true;
+        } else {
+            hideScrollHintLine();
         }
     }
 
     function rollStop() {
         scrollTimer.running = false;
+        hideScrollHintLine();
     }
 
     function rollUp() {
@@ -111,8 +117,20 @@ Item {
             return;
         if (folderListView.contentY > folderListView.topContentY()) {
             scrollTimer.isUp = true;
+            showScrollHintLine(true);
             scrollTimer.running = true;
+        } else {
+            hideScrollHintLine();
         }
+    }
+
+    function showScrollHintLine(isUp) {
+        scrollHintLine.y = isUp ? 0 : Math.max(0, height - scrollHintLine.implicitHeight);
+        scrollHintLine.visible = true;
+    }
+
+    function hideScrollHintLine() {
+        scrollHintLine.visible = false;
     }
 
     function toggleSearch(isSearch) {
@@ -254,6 +272,7 @@ Item {
                 if (folderListView.contentY <= topY) {
                     running = false;
                     folderListView.contentY = topY;
+                    hideScrollHintLine();
                     folderListView.refreshDragTargetAfterScroll();
                     return;
                 }
@@ -264,6 +283,7 @@ Item {
                 if (folderListView.contentY >= bottomY) {
                     running = false;
                     folderListView.contentY = bottomY;
+                    hideScrollHintLine();
                     folderListView.refreshDragTargetAfterScroll();
                     return;
                 }
@@ -300,6 +320,17 @@ Item {
         implicitHeight: 3
         implicitWidth: folderListView.width
         visible: false
+        z: 2
+    }
+
+    Rectangle {
+        id: scrollHintLine
+
+        color: DTK.themeType === ApplicationHelper.LightType ? "#66000000" : "#66FFFFFF"
+        implicitHeight: 3
+        implicitWidth: folderListView.width
+        visible: false
+        z: 2
     }
 
     ListView {
@@ -348,6 +379,7 @@ Item {
             lastDropIndex = -1;
             dragControl.visible = false;
             dragControl.imageSource = "";
+            hideScrollHintLine();
         }
 
         function refreshDragTargetAfterScroll() {
