@@ -42,6 +42,21 @@ Item {
         webView.forceActiveFocus();
     }
 
+    function flushCurrentNote(callback) {
+        var noteId = VNoteMainManager.currentNoteId();
+        var serial = VNoteMainManager.currentTextChangeSerial();
+        webView.runJavaScript("getHtml()", function(result) {
+            if (result !== null && result !== undefined) {
+                VNoteMainManager.flushNoteWithResultForNote(noteId, serial, result);
+            } else {
+                console.warn("flushCurrentNote getHtml returned null, noteId:", noteId, "serial:", serial);
+            }
+            if (callback) {
+                callback();
+            }
+        });
+    }
+
     function showJsContextMenu() {
         // 仅在编辑区可见时尝试弹出；是否在编辑器内由JS自行判断
         if (webVisible) {
@@ -618,10 +633,11 @@ Item {
     Connections {
         target: VNoteMainManager
 
-        onNeedUpdateNote: function(noteId) {
+        onNeedUpdateNote: function(noteId, serial) {
             var requestNoteId = noteId;
+            var requestSerial = serial;
             webView.runJavaScript("getHtml()", function (result) {
-                VNoteMainManager.updateNoteWithResultForNote(requestNoteId, result);
+                VNoteMainManager.updateNoteWithResultForNote(requestNoteId, requestSerial, result);
             });
         }
         onScrollChange: isTop => {

@@ -40,6 +40,7 @@ Item {
     signal mouseChanged(int mousePosX, int mousePosY)
     signal mulChoices(int choices)
     signal noteItemChanged(int index)
+    signal requestNoteContextMenu(var noteIds, int popupIndex, var popupX, var popupY)
 
     function changeCurrentIndex(index) {
         itemListView.currentIndex = index;
@@ -74,6 +75,25 @@ Item {
         if (newDelegate) newDelegate.isSelected = true;
         itemListView.currentIndex = index;
         itemListView.lastCurrentIndex = index;
+    }
+
+    function popupNoteContextMenu(noteIds, popupIndex, popupX, popupY) {
+        if (!noteIds || noteIds.length === 0)
+            return;
+
+        VNoteMainManager.checkNoteVoice(noteIds);
+        VNoteMainManager.checkNoteText(noteIds);
+        if (popupIndex >= 0 && popupIndex < itemModel.count) {
+            var item = itemListView.itemAtIndex(popupIndex);
+            if (item) {
+                try {
+                    noteCtxMenu.popup(item, popupX, popupY);
+                    return;
+                } catch (e) {
+                }
+            }
+        }
+        noteCtxMenu.popup();
     }
 
     function onDeleteNote() {
@@ -219,7 +239,6 @@ Item {
         // 在当前选中项位置弹出笔记右键菜单
         if (selectedNoteItem.length === 0)
             return;
-        // 保持与右键逻辑一致：刷新 contextIndex、检查语音可用性和文本内容
         var validIndexes = validSelectedNoteIndexes();
         if (validIndexes.length === 0)
             return;
@@ -228,16 +247,10 @@ Item {
         for (var i = 0; i < validIndexes.length; i++) {
             list.push(itemModel.get(validIndexes[i]).noteId);
         }
-        VNoteMainManager.checkNoteVoice(list);
-        VNoteMainManager.checkNoteText(list);
         var item = itemListView.itemAtIndex(itemListView.contextIndex);
         if (!item)
             return;
-        try {
-            noteCtxMenu.popup(item, item.width / 2, item.height);
-        } catch (e) {
-            noteCtxMenu.popup();
-        }
+        requestNoteContextMenu(list, itemListView.contextIndex, item.width / 2, item.height);
     }
 
     height: 480
@@ -319,7 +332,6 @@ Item {
                 list.push(itemModel.get(validIndexes[i]).noteId);
             }
             VNoteMainManager.checkNoteVoice(list);
-            VNoteMainManager.checkNoteText(list);
         }
     }
 
@@ -1032,9 +1044,7 @@ Item {
                         for (var i = 0; i < validIndexes.length; i++) {
                             list.push(itemModel.get(validIndexes[i]).noteId);
                         }
-                        VNoteMainManager.checkNoteVoice(list);
-                        VNoteMainManager.checkNoteText(list);
-                        noteCtxMenu.popup();
+                        requestNoteContextMenu(list, -1, 0, 0);
                     } else {
                         // 录音时禁用笔记切换
                         if (isRecordingAudio) {
