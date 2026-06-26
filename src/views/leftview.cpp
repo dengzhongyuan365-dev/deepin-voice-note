@@ -28,6 +28,7 @@
 #include <QDebug>
 #include <QTimer>
 #include <QScrollBar>
+#include <QSet>
 
 /**
  * @brief LeftView::LeftView
@@ -604,7 +605,17 @@ QModelIndex LeftView::selectMoveFolder(const QModelIndexList &src)
         }
         m_folderSelectDialog->setFocus();
         QList<VNoteFolder *> folders;
-        folders.push_back(static_cast<VNoteFolder *>(StandardItemCommon::getStandardItemData(currentIndex())));
+        QSet<VNoteFolder *> folderSet;
+        for (const auto &noteIndex : src) {
+            QModelIndex parentIndex = noteIndex.parent();
+            if (parentIndex.isValid()) {
+                VNoteFolder *folder = static_cast<VNoteFolder *>(StandardItemCommon::getStandardItemData(parentIndex));
+                if (folder && !folderSet.contains(folder)) {
+                    folderSet.insert(folder);
+                    folders.push_back(folder);
+                }
+            }
+        }
         m_folderSelectDialog->setFolderBlack(folders);
         m_folderSelectDialog->setNoteContextInfo(elideText, src.size());
         m_folderSelectDialog->clearSelection();
