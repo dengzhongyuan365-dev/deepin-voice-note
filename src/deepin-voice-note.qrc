@@ -14,6 +14,7 @@
         <file>icon/no_content.dci</file>
         <file>main.qml</file>
         <file>gui/VNoteToolButton.qml</file>
+        <file>gui/VNoteButtonBackground.qml</file>
         <file>gui/VNoteButton.qml</file>
         <file>gui/dialog/MoveDialog.qml</file>
         <file>gui/drag/DragControl.qml</file>

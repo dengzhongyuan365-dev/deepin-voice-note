@@ -291,17 +291,25 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        WindowTitleBar {
-            id: title
+        Item {
+            id: titleBarHost
 
             Layout.fillWidth: true
-            imageBtnEnable: webVisible
-            isInitialInterface: initialVisible
-            isRecordingAudio: rootItem.isRecordingAudio 
-            isVoiceToText: rootItem.isVoiceToText
+            Layout.minimumHeight: 50
+            Layout.maximumHeight: 50
 
-            onTitleOpenSetting: {
-                rootItem.openSetting();
+            WindowTitleBar {
+                id: title
+
+                anchors.fill: parent
+                imageBtnEnable: webVisible
+                isInitialInterface: initialVisible
+                isRecordingAudio: rootItem.isRecordingAudio
+                isVoiceToText: rootItem.isVoiceToText
+
+                onTitleOpenSetting: {
+                    rootItem.openSetting();
+                }
             }
         }
 

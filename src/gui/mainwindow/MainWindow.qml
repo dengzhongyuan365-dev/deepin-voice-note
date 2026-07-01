@@ -480,12 +480,12 @@ ApplicationWindow {
             left: appImage.right
             leftMargin: 19
         }
-        height: 30
         icon.height: 16
         icon.name: "sidebar"
         icon.width: 16
-        visible: !(needHideSearch && search.visible) || leftBgArea.visible
+        height: 30
         width: 30
+        visible: !(needHideSearch && search.visible) || leftBgArea.visible
         z: 100
 
         onClicked: {
@@ -692,10 +692,12 @@ ApplicationWindow {
                     Layout.alignment: Text.AlignRight
                     Layout.rightMargin: 10
                     Layout.topMargin: 10
-                    height: 30
+                    icon.height: 16
                     icon.name: "search"
-                    visible: !search.visible
+                    icon.width: 16
+                    height: 30
                     width: 30
+                    visible: !search.visible
 
                     onClicked: {
                         search.visible = true;

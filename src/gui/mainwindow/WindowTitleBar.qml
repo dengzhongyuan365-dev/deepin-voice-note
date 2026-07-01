@@ -28,8 +28,8 @@ TitleBar {
     signal titleOpenSetting
 
     enableInWindowBlendBlur: false
-    height: 50
-    width: 0
+
+    anchors.fill: parent
 
     background: Rectangle {
         color: DTK.themeType === ApplicationHelper.LightType ? "white" : "#242424"
@@ -58,7 +58,11 @@ TitleBar {
         anchors.verticalCenter: titleBar.verticalCenter
         enabled: !isPlaying && !isSearching && !isRecordingAudio && !isVoiceToText
         hoverEnabled: !isInitialInterface
+        icon.height: 16
         icon.name: "new_note"
+        icon.width: 16
+        height: 30
+        width: 30
 
         onClicked: {
             createNote();
@@ -97,7 +101,11 @@ TitleBar {
         anchors.verticalCenter: titleBar.verticalCenter
         enabled: recorderBtnEnable && imageBtnEnable && !isPlaying && !isSearching
         hoverEnabled: !isInitialInterface
+        icon.height: 16
         icon.name: "record"
+        icon.width: 16
+        height: 30
+        width: 30
 
         onClicked: {
             startRecording();
@@ -116,7 +124,11 @@ TitleBar {
         anchors.verticalCenter: titleBar.verticalCenter
         enabled: imageBtnEnable
         hoverEnabled: !isInitialInterface
+        icon.height: 16
         icon.name: "img"
+        icon.width: 16
+        height: 30
+        width: 30
         x: titleBar.__includedAreaX - recordBtn.width - 10
 
         onClicked: {

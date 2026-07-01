@@ -77,8 +77,8 @@ FocusScope {
             icon.height: iconSize
             icon.name: isRecording ? "recording_pause" : "recording_start"
             icon.width: iconSize
-            implicitHeight: btnSize
-            implicitWidth: btnSize
+            height: btnSize
+            width: btnSize
             KeyNavigation.tab: stopBtn
             KeyNavigation.backtab: stopBtn
 
@@ -111,8 +111,8 @@ FocusScope {
             icon.height: iconSize
             icon.name: "recording_stop"
             icon.width: iconSize
-            implicitHeight: btnSize
-            implicitWidth: btnSize
+            height: btnSize
+            width: btnSize
             KeyNavigation.tab: pauseBtn
             KeyNavigation.backtab: pauseBtn
 
