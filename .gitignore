@@ -20,3 +20,7 @@ build
 .aider*
 .claude/
 .spec-workflow/
+.npm-cache/
+.codegraph/
+# Frontend dependencies
+web-editor/node_modules/

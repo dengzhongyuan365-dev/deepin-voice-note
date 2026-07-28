@@ -137,6 +137,7 @@ var bTransVoiceIsReady = true;  //语音转文字是否准备好
 var initFinish = false;
 var isVoicePaste = false
 var isShowAir = true
+var contextMenuToolbarActive = false // 右键菜单期间禁止 airPopover.update 覆盖定位
 var nowClickVoice = null
 var global_activeColor = ''
 var lastRightClickX = 0;  // 保存右键点击的X坐标
@@ -146,12 +147,12 @@ var global_theme = 1    // theme type 1:light 2:dark
 var global_themeColor = 'transparent'  //主题色
 var global_isRecording = false  // 录音状态标志
 var scrollHide = null  //滚动条隐藏定时器
-var scrollHideFont = null  //字体滚动条定时
 var isUlOrOl = false
 const airPopoverHeight = 44  //悬浮工具栏高度
 const airPopoverWidth = 385  //悬浮工具栏宽度
 const airPopoverLeftMargin = 20 //悬浮工具栏距离编辑区左侧边距
 const airPopoverRightMargin = 35 //悬浮工具栏距离编辑区右侧边距
+const airPopoverMenuSpacing = 10 // 工具栏与右键菜单间距
 
 // 翻译列表
 var tooltipContent = {
@@ -176,6 +177,14 @@ var divTranslateContent = {
 
 // 字体列表
 var global_fontList = []
+
+/**
+ * 生成 UUID v4
+ * @returns {string} UUID 字符串
+ */
+function generateUUID() {
+    return crypto.randomUUID();
+}
 
 // 国际化
 function changeLang(tooltipContent) {
@@ -207,6 +216,28 @@ function setInitFont(initFontName) {
 // 全局变量：存储 AppData 基准路径，仅用于编辑区内图片/音频路径转换
 var globalAppDataBase = null;
 
+function appImageRelPath(path) {
+    var normalized = (path || '').replace(/\\/g, '/');
+    if (normalized.indexOf('images/') === 0) {
+        return normalized;
+    }
+    if (globalAppDataBase && normalized.indexOf(globalAppDataBase + 'images/') === 0) {
+        return normalized.substring(globalAppDataBase.length);
+    }
+    return '';
+}
+
+function appImageUrl(relPath) {
+    if (!globalAppDataBase || relPath.indexOf('images/') !== 0) {
+        return '';
+    }
+    try {
+        return new URL(relPath, globalAppDataBase).href;
+    } catch (e) {
+        return '';
+    }
+}
+
 // 建立通信
 new QWebChannel(qt.webChannelTransport,
     function (channel) {
@@ -233,16 +264,19 @@ new QWebChannel(qt.webChannelTransport,
         webobj.callJsSetPlayStatus.connect(toggleState);
         webobj.callJsSetHtml.connect(setHtml);
         webobj.callJsSetVoiceText.connect(setVoiceText);
+        webobj.callJsSetVoiceTextByPath.connect(setVoiceTextByPath);
         webobj.callJsInsertImages.connect(insertImg);
         webobj.callJsSetTheme.connect(changeColor);
         webobj.calllJsShowEditToolbar.connect(showRightMenu);
         webobj.callJsHideEditToolbar.connect(hideRightMenu);
         webobj.callJsClipboardDataChanged.connect(shearPlateChange);
         webobj.callJsSetVoicePlayBtnEnable.connect(playButColor);
+        webobj.callJsFocusEditor.connect(focusEditor);
         webobj.callJsSetFontList.connect(setFontList);
 
         webobj.callJsVoicePlayProgressChanged.connect(updateProgressBar);
         webobj.callJsDeleteSelection.connect(deleteSelection);
+        webobj.callJsSelectAll.connect(selectAllText);
         //通知QT层完成通信绑定
         webobj.jsCallChannleFinish();
         // setFontList(global_fontList, "Unifont")
@@ -329,7 +363,7 @@ function changeContent(we, contents, $editable) {
         $('.note-editable').html('<p><br></p>')
     }
     if (webobj && initFinish) {
-        if (!$('.note-air-popover').is(':hidden')) {
+        if (!$('.note-air-popover').is(':hidden') && !toolbarButtonClicked) {
             if (getSelectedRange().innerHTML == "") {
                 $('#summernote').summernote('airPopover.hide')
             }
@@ -552,6 +586,24 @@ function copyVoice(event) {
         $(docFragment).find('.voicePlayback').removeClass('now').removeClass('play').removeClass('pause').removeClass('voiceToText');
         $(docFragment).find('.voiceInfoBox').removeClass('containText');
 
+        // 为复制的语音块生成新的 voiceId，避免与原语音块冲突
+        $(docFragment).find('.voiceBox').each(function() {
+            try {
+                var jsonKey = $(this).attr('jsonKey');
+                if (jsonKey) {
+                    var json = JSON.parse(jsonKey);
+                    // 生成新的 voiceId
+                    json.voiceId = generateUUID();
+                    // 清除已有的转文字结果
+                    delete json.text;
+                    delete json.translateUnfold;
+                    $(this).attr('jsonKey', JSON.stringify(json));
+                }
+            } catch (e) {
+                console.log('Error updating voiceId on copy:', e);
+            }
+        });
+
         isVoicePaste = true
 
     }
@@ -607,6 +659,9 @@ document.addEventListener('paste', function (event) {
     }
     setFocusScroll()
     removeNullP()
+    if (webobj && initFinish) {
+        webobj.jsCallTxtChange();
+    }
 });
 
 // 页面滚动到光标位置
@@ -650,9 +705,21 @@ function isRangeVoice() {
     let childrenLength = $(testDiv).children().length
     let voiceLength = $(testDiv).find('.voiceBox').length
 
+    // 检查选区是否是语音块的内容（当 setSelectRange 选中 .voiceBox 时，
+    // cloneContents 会克隆其子节点，所以需要检查 .voiceInfoBox）
+    let isVoiceContent = $(testDiv).children('.voiceInfoBox').length > 0;
+
     if (voiceLength == childrenLength && childrenLength != 0) {
         selectedRange.flag = 1
         selectedRange.info = $(testDiv).find('.voiceBox:first').attr('jsonKey')
+        recordActiveVoice()
+    } else if (isVoiceContent) {
+        // 选区是语音块的内容（包含 .voiceInfoBox），属于语音菜单
+        selectedRange.flag = 1
+        // 从 activeTransVoice 获取 jsonKey
+        if (activeTransVoice) {
+            selectedRange.info = activeTransVoice.attr('jsonKey')
+        }
         recordActiveVoice()
     } else if ($(testDiv).find('img').length == childrenLength
         && childrenLength == 1
@@ -727,19 +794,10 @@ function getHtml() {
     // 确保图片保存为相对路径
     $cloneCode.find('img').each(function () {
         var $img = $(this);
-        var relPath = $img.attr('data-rel-path');
+        var relPath = appImageRelPath($img.attr('data-rel-path')) || appImageRelPath($img.attr('src'));
         if (relPath) {
             $img.attr('src', relPath);
             $img.removeAttr('data-rel-path');
-        } else {
-            // 如果没有 data-rel-path，尝试从当前 src 提取相对路径
-            var src = $img.attr('src') || '';
-            if (src.indexOf('images/') >= 0) {
-                var idx = src.lastIndexOf('images/');
-                if (idx >= 0) {
-                    $img.attr('src', src.substring(idx));
-                }
-            }
         }
     });
     
@@ -875,16 +933,19 @@ function initData(text) {
             if (!item.transSize) {
                 item.transSize = formatMillisecond(item.voiceSize)
             }
+            // 确保语音块有唯一 voiceId
+            if (!item.voiceId) {
+                item.voiceId = generateUUID();
+            }
             voiceHtml = transHtml(item, false);
             html += voiceHtml;
         }
     })
 
     $('#summernote').summernote('code', html);
-    // 搜索功能
-    webobj.jsCallSetDataFinsh();
     initFinish = true;
     $('#summernote').summernote('editor.resetRecord')
+    webobj.jsCallSetDataFinsh();
 }
 
 /**
@@ -906,6 +967,10 @@ function playButColor(status) {
     }
 }
 
+function focusEditor() {
+    $('#summernote').summernote('editor.focus')
+}
+
 //录音插入数据
 function insertVoiceItem(text) {
     //插入语音之前先设置焦点
@@ -922,12 +987,29 @@ function insertVoiceItem(text) {
     oA.setAttribute('jsonKey', text);
     oA.innerHTML = voiceHtml;
 
-    var tmpNode = document.createElement("div");
-    tmpNode.appendChild(oA.cloneNode(true));
-    var str = '<p><br></p>' + tmpNode.innerHTML + '<p><br></p>';
-
-    document.execCommand('insertHTML', false, str);
-    // $('#summernote').summernote('editor.recordUndo')
+    // 检查是否有选中的 voiceBox（通过 .active class 判断，和右键菜单逻辑一致）
+    var $activeVoiceBox = $('.voiceBox.active');
+    if ($activeVoiceBox.length > 0) {
+        // 有选中的 voiceBox，用 DOM 操作在它后面插入（保证一致：都不替换）
+        var pBefore = document.createElement('p');
+        pBefore.innerHTML = '<br>';
+        var pAfter = document.createElement('p');
+        pAfter.innerHTML = '<br>';
+        
+        // 在 active 的 voiceBox 后面插入
+        $activeVoiceBox.after(pBefore);
+        $(pBefore).after(oA);
+        $(oA).after(pAfter);
+        
+        // 清除选中状态
+        $activeVoiceBox.removeClass('active');
+    } else {
+        // 没有选中 voiceBox，用原来的 execCommand 在光标位置插入
+        var tmpNode = document.createElement("div");
+        tmpNode.appendChild(oA.cloneNode(true));
+        var str = '<p><br></p>' + tmpNode.innerHTML + '<p><br></p>';
+        document.execCommand('insertHTML', false, str);
+    }
 
     removeNullP()
     setFocusScroll()
@@ -1023,17 +1105,11 @@ function setHtml(html) {
     if (globalAppDataBase) {
         $('.note-editable img').each(function () {
             var $img = $(this);
-            var src = $img.attr('src') || '';
-            // 如果是相对路径 images/xxx，转换为绝对路径显示
-            if (src.indexOf('images/') === 0 || (src.indexOf('/images/') > 0 && !src.startsWith('file://') && !src.startsWith('http'))) {
-                var relPath = src.indexOf('images/') >= 0 ? src.substring(src.lastIndexOf('images/')) : src;
-                try {
-                    var absUrl = new URL(relPath, globalAppDataBase).href;
-                    $img.attr('src', absUrl);
-                    $img.attr('data-rel-path', relPath);
-                } catch (e) {
-                    // 转换失败，保持原样
-                }
+            var relPath = appImageRelPath($img.attr('src'));
+            var absUrl = relPath ? appImageUrl(relPath) : '';
+            if (absUrl) {
+                $img.attr('src', absUrl);
+                $img.attr('data-rel-path', relPath);
             }
         });
     }
@@ -1041,15 +1117,27 @@ function setHtml(html) {
     // TODO: 实验性功能，替换 HTML 文本中的语音控件版本，不涉及数据的变更
     replaceVoiceToVersion2();
     ensureVoiceBoxesDraggable();
+    
+    // 确保所有语音块都有唯一的 voiceId
+    var voiceIdUpdated = ensureAllVoiceBoxesHaveId();
+
+    // 恢复已保存的语音转文字结果
+    restoreVoiceTextFromJsonKey();
 
     initFinish = true;
-    // 搜索功能
-    webobj.jsCallSetDataFinsh();
+    
+    // 如果 voiceId 有更新，需要保存到数据库
+    if (voiceIdUpdated && webobj) {
+        console.log('VoiceId updated, triggering save...');
+        webobj.jsCallTxtChange();
+    }
+    
     resetScroll()
     $('#summernote').summernote('editor.resetRecord')
 
     // We need call once at init, ensure the foreground color / background color is correct.
     switchTextColor(global_theme == 2)
+    webobj.jsCallSetDataFinsh();
 }
 
 /**
@@ -1103,14 +1191,101 @@ function setVoiceText(text, flag) {
             $('.li').removeClass('active');
         }
         else {
-            var voiceInfoBox = activeTransVoice.find('.voiceInfoBox');
-            if (!voiceInfoBox.hasClass('containText')) {
-                // 设置语音转换中标识，已有文本不再进行转换
-                activeTransVoice.find('.voicePlayback').addClass('voiceToText');
-                bTransVoiceIsReady = false;
-            }
+            // 设置语音转换中标识（无论是否已有文本，重新转换都显示转圈状态）
+            activeTransVoice.find('.voicePlayback').addClass('voiceToText');
+            bTransVoiceIsReady = false;
         }
     }
+}
+
+/**
+ * 通过 voiceId 设置语音转文字结果（支持笔记切换场景）
+ * @param {string} voiceId 语音块唯一标识（UUID）
+ * @param {string} text 转换文本内容
+ * @param {number} flag 0: 转换过程中 1: 结果
+ */
+function setVoiceTextByPath(voiceId, text, flag) {
+    var $voiceBox = null;
+
+    // 通过 voiceId 查找语音元素
+    $('.voiceBox').each(function() {
+        try {
+            var jsonKey = $(this).attr('jsonKey');
+            if (jsonKey) {
+                var json = JSON.parse(jsonKey);
+                if (json.voiceId === voiceId) {
+                    $voiceBox = $(this);
+                    return false; // break
+                }
+            }
+        } catch (e) {
+            console.log('Error parsing jsonKey:', e);
+        }
+    });
+
+    if (!$voiceBox) {
+        console.log('Voice element not found for voiceId:', voiceId);
+        return;
+    }
+
+    if (flag) {
+        // flag=1: 转换完成，显示结果
+        if (text) {
+            var translate = $voiceBox.find('.translate');
+            var jsonData = {
+                translateLabel: divTranslateContent.translateLabel,
+                translateText: text
+            }
+            var textBindDataHandle = Handlebars.compile(translateTextContentTemplate);
+            const translateTexthtml = textBindDataHandle(jsonData);
+            translate.html(translateTexthtml);
+
+            $voiceBox.find('.voiceInfoBox').addClass('containText');
+            translate.find('.translateHeader').addClass('unfold');
+            translate.hide();
+            translate.slideDown('fast');
+        }
+
+        // 更新 jsonKey 中的 text 字段
+        var jsonValue = $voiceBox.attr('jsonKey');
+        var jsonObj = JSON.parse(jsonValue);
+        jsonObj.text = text;
+        $voiceBox.attr('jsonKey', JSON.stringify(jsonObj));
+
+        // 移除转换中状态
+        $voiceBox.find('.voicePlayback').removeClass('voiceToText');
+
+        webobj.jsCallTxtChange();
+    } else {
+        // flag=0: 转换中，显示转换中状态（无论是否已有文本，重新转换都显示转圈状态）
+        $voiceBox.find('.voicePlayback').addClass('voiceToText');
+    }
+}
+
+/**
+ * 确保所有语音块都有唯一的 voiceId
+ * 用于兼容没有 voiceId 的旧数据
+ * @returns {boolean} 是否有数据被更新
+ */
+function ensureAllVoiceBoxesHaveId() {
+    var needSave = false;
+    $('.voiceBox').each(function() {
+        try {
+            var jsonKey = $(this).attr('jsonKey');
+            if (jsonKey) {
+                var json = JSON.parse(jsonKey);
+                if (!json.voiceId) {
+                    json.voiceId = generateUUID();
+                    $(this).attr('jsonKey', JSON.stringify(json));
+                    needSave = true;
+                    console.log('Generated voiceId for voice:', json.voicePath, '->', json.voiceId);
+                }
+            }
+        } catch (e) {
+            console.log('Error ensuring voiceId:', e);
+        }
+    });
+    return needSave;
 }
 
 //json串拼接成对应html串 flag==》》 false: h5串  true：node串
@@ -1137,6 +1312,62 @@ function transHtml(json, flag) {
 // 保证从历史/替换渲染回来的 voiceBox 都具有 draggable 属性
 function ensureVoiceBoxesDraggable() {
     $('.voiceBox').attr('draggable', 'true');
+}
+
+/**
+ * 恢复已保存的语音转文字结果
+ * 遍历所有语音元素，检查 jsonKey 中是否有 text 字段，
+ * 如果有则渲染到 .translate 区域，并恢复展开/收起状态
+ */
+function restoreVoiceTextFromJsonKey() {
+    $('.voiceBox').each(function() {
+        var $voiceBox = $(this);
+        var translate = $voiceBox.find('.translate');
+        
+        // 如果 .translate 区域已经有内容，跳过
+        if (translate.children().length > 0) {
+            return;
+        }
+        
+        try {
+            var jsonKey = $voiceBox.attr('jsonKey');
+            if (jsonKey) {
+                var json = JSON.parse(jsonKey);
+                // 检查是否有已保存的转换结果
+                if (json.text && json.text.trim()) {
+                    // 渲染转换结果到 .translate 区域
+                    var jsonData = {
+                        translateLabel: divTranslateContent.translateLabel,
+                        translateText: json.text
+                    };
+                    var textBindDataHandle = Handlebars.compile(translateTextContentTemplate);
+                    var translateTextHtml = textBindDataHandle(jsonData);
+                    translate.html(translateTextHtml);
+                    
+                    // 设置已有文本的样式
+                    $voiceBox.find('.voiceInfoBox').addClass('containText');
+                    
+                    // 恢复展开/收起状态（默认展开，除非明确设置为收起）
+                    var translateHeader = translate.find('.translateHeader');
+                    var translateText = translate.find('.translateText');
+                    
+                    if (json.translateUnfold === false) {
+                        // 收起状态
+                        translateHeader.removeClass('unfold');
+                        translateText.hide();
+                    } else {
+                        // 展开状态（默认）
+                        translateHeader.addClass('unfold');
+                        translateText.show();
+                    }
+                    
+                    console.log('Restored voice text for:', json.voicePath, 'unfold:', json.translateUnfold !== false);
+                }
+            }
+        } catch (e) {
+            console.log('Error restoring voice text:', e);
+        }
+    });
 }
 
 //设置summerNote编辑状态 
@@ -1187,6 +1418,18 @@ function rightClick(e) {
         }
         $('#summernote').summernote('airPopover.hide');
         setSelectRange($(e.target).closest('.voiceBox')[0]);
+    } else if ($(e.target).closest('.translateHeader').length != 0) {
+        // 点击在"语音转文本"标题行区域，弹出语音菜单
+        $(e.target).closest('.li').addClass('active');
+        if (bTransVoiceIsReady) {
+            activeTransVoice = $(e.target).closest('.li:first');
+        }
+        $('#summernote').summernote('airPopover.hide');
+        setSelectRange($(e.target).closest('.voiceBox')[0]);
+    } else if ($(e.target).closest('.translateText').length != 0) {
+        // 点击在转写文字区域，弹出文字菜单，不改变选区
+        // 文字菜单由 isRangeVoice() 返回 flag=2 触发
+        $('#summernote').summernote('airPopover.hide');
     } else if (voiceLength == childrenLength && childrenLength != 0) {
         // selection中只有语音块，但右键点击位置不在语音块上，说明是旧的selection，需要清除
         if ($(e.target).closest('.voiceBox').length == 0) {
@@ -1198,40 +1441,51 @@ function rightClick(e) {
         }
     }
     let info = isRangeVoice()
+    if (info.flag === 2) {
+        // 文本菜单弹出前先隐藏工具栏，待菜单位置确定后再重新定位显示
+        contextMenuToolbarActive = true;
+        $('#summernote').summernote('airPopover.hide');
+    }
     webobj.jsCallPopupMenu(info.flag, info.info);
     // 阻止默认右键事件
     // e.preventDefault()
+}
+
+function setAirPopoverTooltipPlacement(placement) {
+    $('.note-air-popover .note-btn, .note-air-popover .note-color-btn').each(function () {
+        var $btn = $(this);
+        $btn.attr('data-placement', placement);
+        var tip = $btn.data('bs.tooltip');
+        if (tip) {
+            tip.options.placement = placement;
+        }
+    });
+}
+
+function restoreAirPopoverTooltipPlacement() {
+    setAirPopoverTooltipPlacement('top');
+    contextMenuToolbarActive = false;
 }
 
 /**
  * 接收QML传来的菜单位置，计算并显示工具栏
  */
 function setMenuPosition(menuX, menuY, menuWidth, menuHeight) {
-    console.log("收到菜单位置: x=" + menuX + ", y=" + menuY + ", w=" + menuWidth + ", h=" + menuHeight);
-    console.log("右键点击位置: x=" + lastRightClickX + ", y=" + lastRightClickY);
-    
+    if (menuX <= 0 && lastRightClickX > 0) {
+        menuX = lastRightClickX;
+    }
+    if (menuY <= 0 && lastRightClickY > 0) {
+        menuY = lastRightClickY;
+    }
+
     var winWidth = $(window).width();
     var winHeight = $(window).height();
-    var scrollLeft = $(document).scrollLeft();
-    var scrollTop = $(document).scrollTop();
-    
-    // 获取工具栏实际尺寸
+
     var $airPopover = $('.note-air-popover');
-    var toolbarHeight = $airPopover.outerHeight() || 44;
-    var toolbarWidth = $airPopover.outerWidth() || 385;
-    
-    var spacing = 10;  // 固定间距
-    
-    console.log("工具栏尺寸: w=" + toolbarWidth + ", h=" + toolbarHeight);
-    console.log("窗口尺寸: w=" + winWidth + ", h=" + winHeight);
-    
-    // 计算菜单到顶部和底部的距离
-    var menuTopDistance = menuY;
-    var menuBottomDistance = winHeight - (menuY + menuHeight);
-    
-    console.log("菜单顶部距离: " + menuTopDistance + ", 底部距离: " + menuBottomDistance);
-    
-    // 计算工具栏X坐标（以点击位置为基准，确保不超出边界）
+    var toolbarHeight = $airPopover.outerHeight() || airPopoverHeight;
+    var toolbarWidth = $airPopover.outerWidth() || airPopoverWidth;
+    var spacing = airPopoverMenuSpacing;
+
     var toolbarX = lastRightClickX;
     if (toolbarX + toolbarWidth > winWidth) {
         toolbarX = winWidth - toolbarWidth - 10;
@@ -1239,32 +1493,39 @@ function setMenuPosition(menuX, menuY, menuWidth, menuHeight) {
     if (toolbarX < 10) {
         toolbarX = 10;
     }
-    
-    // 计算工具栏Y坐标
+
     var toolbarY;
-    if (menuTopDistance >= toolbarHeight + spacing) {
-        // 菜单上方空间足够，放在上方
-        toolbarY = menuY - toolbarHeight - spacing;
-        console.log("工具栏放在菜单上方");
-    } else if (menuBottomDistance >= toolbarHeight + spacing) {
-        // 菜单下方空间足够，放在下方
-        toolbarY = menuY + menuHeight + spacing;
-        console.log("工具栏放在菜单下方");
+    var toolbarBelowMenu = false;
+
+    if (menuHeight <= 0) {
+        toolbarY = menuY + spacing;
+        toolbarBelowMenu = true;
     } else {
-        // 上下都不够，放在空间更大的一侧
-        if (menuTopDistance > menuBottomDistance) {
-            toolbarY = 10;  // 贴顶
-            console.log("工具栏贴顶");
+        var menuTopDistance = menuY;
+        var menuBottomDistance = winHeight - (menuY + menuHeight);
+
+        if (menuTopDistance >= toolbarHeight + spacing) {
+            toolbarY = menuY - toolbarHeight - spacing;
+        } else if (menuBottomDistance >= toolbarHeight + spacing) {
+            toolbarY = menuY + menuHeight + spacing;
+            toolbarBelowMenu = true;
+        } else if (menuTopDistance > menuBottomDistance) {
+            toolbarY = 10;
         } else {
-            toolbarY = winHeight - toolbarHeight - 10;  // 贴底
-            console.log("工具栏贴底");
+            toolbarY = winHeight - toolbarHeight - 10;
+            toolbarBelowMenu = true;
         }
     }
-    
-    console.log("最终工具栏位置: x=" + toolbarX + ", y=" + toolbarY);
-    
-    // 显示工具栏（转换为文档坐标）
-    showRightMenu(toolbarX + scrollLeft, toolbarY + scrollTop);
+
+    contextMenuToolbarActive = true;
+    setAirPopoverTooltipPlacement(toolbarBelowMenu ? 'bottom' : 'top');
+    $('.note-air-popover .note-btn, .note-air-popover .note-color-btn').each(function () {
+        var tip = $(this).data('bs.tooltip');
+        if (tip) {
+            $(this).tooltip('hide');
+        }
+    });
+    showRightMenu(toolbarX, toolbarY);
 }
 
 /**
@@ -1339,32 +1600,15 @@ function changeColor(flag, activeColor, disableColor, backgroundColor) {
         setVoiceButColor(global_activeColor, global_disableColor)
     }
 
-    $('.dropdown-fontsize>li>a').hover(function (e) {
-        $(this).css('background-color', activeColor);
-    }, function () {
-        $('.dropdown-fontsize>li>a').css('background-color', 'transparent');
-        if (flag == 1) {
-            $('.dropdown-fontsize>li>a').css('color', "black");
-        } else {
-            $('.dropdown-fontsize>li>a').css('color', "rgba(197,207,224,1)");
-        }
-    })
-    $('.dropdown-fontname>li>a').hover(function (e) {
-        $(this).css('background-color', activeColor);
-    }, function () {
-        $('.dropdown-fontname>li>a').css('background-color', 'transparent');
-        if (flag == 1) {
-            $('.dropdown-fontname>li>a').css('color', "black");
-        } else {
-            $('.dropdown-fontname>li>a').css('color', "rgba(197,207,224,1)");
-        }
-    })
+    var menuItemFg = flag == 1 ? 'black' : 'rgba(197,207,224,1)';
+    var scrollbarThumb = flag == 1 ? 'rgba(0, 0, 0, 0.30)' : 'rgba(255, 255, 255, 0.20)';
+    document.documentElement.style.setProperty('--vn-menu-hover-bg', activeColor);
+    document.documentElement.style.setProperty('--vn-menu-item-fg', menuItemFg);
+    document.documentElement.style.setProperty('--vn-fontlist-scrollbar-thumb', scrollbarThumb);
 
     if (flag == 1) {
         $('body').removeClass('dark');
         $('#dark').remove()
-        $('.dropdown-fontsize>li>a').css('color', "black");
-        $('.dropdown-fontname>li>a').css('color', "black");
     } else if (flag == 2 && !$('#dark').length) {
         $('body').addClass('dark');
         $("head").append("<link>");
@@ -1479,19 +1723,22 @@ function initVoiceDragAndDrop() {
 async function insertImg(urlStr) {
     // 后端已发送相对路径 images/xxx，显示时转换为绝对路径，保存时保持相对路径
     urlStr.forEach((item) => {
-        var relPath = ('' + item).replace(/\\/g, '/');
+        var rawPath = ('' + item).replace(/\\/g, '/');
+        var relPath = appImageRelPath(rawPath);
         // 显示时使用绝对路径
-        var displayUrl = relPath;
-        if (globalAppDataBase && relPath.indexOf('images/') === 0) {
-            try {
-                displayUrl = new URL(relPath, globalAppDataBase).href;
-            } catch (e) {
-                displayUrl = relPath;
-            }
+        var displayUrl = relPath || rawPath;
+        var appDataUrl = relPath ? appImageUrl(relPath) : '';
+        if (appDataUrl) {
+            displayUrl = appDataUrl;
         }
         $("#summernote").summernote('insertImage', displayUrl, function ($image) {
             // 保存相对路径到 data 属性，保存 HTML 时使用
-            $image.attr('data-rel-path', relPath);
+            if (relPath) {
+                $image.attr('data-rel-path', relPath);
+            }
+            if (webobj && initFinish) {
+                webobj.jsCallTxtChange();
+            }
         });
     })
 }
@@ -1500,18 +1747,18 @@ async function insertImg(urlStr) {
  * trigger play/pause voice when key space / return / enter down
  */
 function triggerPlayPauseVoice(event) {
-    // 录音时禁止播放语音
-    if (global_isRecording) {
-        console.log("Cannot play voice while recording (triggered by keyboard)");
-        event.preventDefault();  // 阻止Enter/Space键的默认行为，防止删除选中内容
-        return false;
-    }
-    
     var currentLi = $('.li.active');
     if (currentLi.length > 0) {
-        event.preventDefault();
         var info = isRangeVoice();
         if (info.flag == 1) {
+            event.preventDefault();
+
+            // 录音时禁止播放语音
+            if (global_isRecording) {
+                console.log("Cannot play voice while recording (triggered by keyboard)");
+                return false;
+            }
+
             var curPlayback = currentLi.first().find('.voicePlayback');
             // 点击浮动窗口时视同点击焦点音频播放控件
             if (curPlayback.is(airVoicePlayback)) {
@@ -1826,12 +2073,47 @@ $('body').on('click', 'img', function (e) {
  * @returns {any}
  */
 function showRightMenu(x, y) {
-    $('#summernote').summernote('airPopover.rightUpdate', x, y)
+    // 检查当前选区是否仅在 .translateText 或 .voiceBox 区域内
+    // 如果是，则不显示悬浮编辑工具栏
+    var selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+        var range = selection.getRangeAt(0);
+        var container = range.commonAncestorContainer;
+        // 如果是文本节点，获取其父元素
+        if (container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+        }
+        // 检查是否在 .translateText 或 .voiceBox 内
+        var $container = $(container);
+        if ($container.closest('.translateText').length > 0 ||
+            $container.closest('.voiceBox').length > 0) {
+            return;
+        }
+    }
+    $('#summernote').summernote('airPopover.rightUpdate', x, y);
 }
 
-// 右键隐藏悬浮工具栏
+var toolbarButtonClicked = false;
+
+// 点击工具栏时置位，供 changeContent / hideRightMenu 避免误隐藏
+$(document).on('mousedown', '.note-air-popover, .note-air-popover *', function (e) {
+    toolbarButtonClicked = true;
+    if ($(e.target).closest('.note-btn').length) {
+        e.preventDefault();
+    }
+});
+
+$(document).on('click', '.note-air-popover, .note-air-popover *', function (e) {
+    setTimeout(function () { toolbarButtonClicked = false; }, 100);
+});
+
 function hideRightMenu() {
-    $('#summernote').summernote('airPopover.hide')
+    if (toolbarButtonClicked) {
+        toolbarButtonClicked = false;
+        return;
+    }
+    $('#summernote').summernote('airPopover.hide');
+    restoreAirPopoverTooltipPlacement();
 }
 
 // 重置滚动条
@@ -1865,7 +2147,6 @@ $(document).scroll(function () {
     }, 1500);
 });
 
-// 字体滚动条
 function listenFontnameList() {
     $('.dropdown-fontname ').scroll(function () {
         // 阻止内部滚动条到底后自动触发外部滚动
@@ -1875,24 +2156,6 @@ function listenFontnameList() {
             // 定位到距离底部2px的位置
             scroll.scrollTop = (scroll.scrollHeight - scroll.clientHeight - 2)
         }
-
-        if (scrollHideFont) {
-            clearTimeout(scrollHideFont)
-            $('#scrollStyleFont').html(`
-        .dropdown-fontname::-webkit-scrollbar-thumb {
-        background-color:${global_theme == 1 ? "rgba(0, 0, 0, 0.30)" : "rgba(255, 255, 255, 0.20)"} ;
-        }
-        /* 适配申威，触发重绘 */
-        html {
-            background-color: ${global_themeColor}fe;
-        }
-        `
-            )
-        }
-
-        scrollHideFont = setTimeout(() => {
-            $('#scrollStyleFont').html('')
-        }, 1500);
     });
 }
 
@@ -1923,6 +2186,41 @@ function setSelectColorButton($dom) {
  */
 function deleteSelection() {
     $('#summernote').summernote('editor.deleteContents');
+}
+
+/**
+ * 全选操作
+ * 根据右键点击位置智能判断：
+ * - 如果在 .translateText 区域，则选中该区域的文字
+ * - 否则选中整个编辑区
+ */
+function selectAllText() {
+    // 根据保存的右键点击位置查找元素
+    var elementAtClick = document.elementFromPoint(lastRightClickX, lastRightClickY);
+    
+    // 检查是否点击在 translateText 区域
+    var $translateText = $(elementAtClick).closest('.translateText');
+    
+    if ($translateText.length > 0) {
+        // 选中 translateText 区域的所有文字
+        var range = document.createRange();
+        range.selectNodeContents($translateText[0]);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        console.log("全选: translateText 区域");
+    } else {
+        // 选中整个编辑区
+        var $editable = $('.note-editable');
+        if ($editable.length > 0) {
+            var range = document.createRange();
+            range.selectNodeContents($editable[0]);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            console.log("全选: 整个编辑区");
+        }
+    }
 }
 
 /***** 以下为语音播放相关函数 *****/
@@ -2177,12 +2475,34 @@ function toggleVoiceToTextState(translateHeader) {
         return;
     }
 
+    // 找到对应的 voiceBox 元素
+    var $voiceBox = translateHeader.closest('.voiceBox');
+    var isUnfold;
+
     if (translateHeader.hasClass('unfold')) {
         translateHeader.removeClass('unfold');
         translateHeader.next('.translateText').slideUp('fast');
+        isUnfold = false;
     } else {
         translateHeader.addClass('unfold');
         translateHeader.next('.translateText').slideDown('fast');
+        isUnfold = true;
+    }
+
+    // 保存展开/收起状态到 jsonKey
+    if ($voiceBox.length > 0) {
+        try {
+            var jsonKey = $voiceBox.attr('jsonKey');
+            if (jsonKey) {
+                var json = JSON.parse(jsonKey);
+                json.translateUnfold = isUnfold;
+                $voiceBox.attr('jsonKey', JSON.stringify(json));
+                // 触发内容变更以保存
+                webobj.jsCallTxtChange();
+            }
+        } catch (e) {
+            console.log('Error saving fold state:', e);
+        }
     }
 }
 

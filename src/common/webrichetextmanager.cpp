@@ -1,8 +1,12 @@
+// SPDX-FileCopyrightText: 2026 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "webrichetextmanager.h"
 #include "jscontent.h"
 #include "db/vnoteitemoper.h"
 #include "metadataparser.h"
 #include "common/utils.h"
+#include "handler/voice_to_text_task_manager.h"
 
 #include <QTimer>
 #include <QEventLoop>
@@ -10,6 +14,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QUrl>
+#include <QUuid>
 
 
 WebRichTextManager::WebRichTextManager(QObject *parent)
@@ -54,12 +59,15 @@ void WebRichTextManager::initConnect()
     qInfo() << "Initializing connections";
     connect(JsContent::instance(), &JsContent::textChange, this, [=](){
         m_textChange = true;
+        m_textChangeNoteId = m_noteData ? m_noteData->noteId : -1;
+        ++m_textChangeSerial;
         emit noteTextChanged();
     });
 
     connect(JsContent::instance(), &JsContent::scrollTopChange, this, [=](bool isTop){
         emit scrollChange(isTop);
     });
+    connect(JsContent::instance(), &JsContent::setDataFinsh, this, &WebRichTextManager::onSetDataFinsh);
     qInfo() << "Connections initialized";
 }
 
@@ -82,6 +90,35 @@ void WebRichTextManager::setData(VNoteItem *data, const QString reg)
     }
     m_updateTimer->start();
     emit updateSearch();
+
+    // 检查该笔记是否有转换任务，恢复相应状态
+    int noteId = data->noteId;
+    QTimer::singleShot(500, this, [noteId]() {
+        auto tasks = VoiceToTextTaskManager::instance()->getTasksForNote(noteId);
+        for (const auto &task : tasks) {
+            if (task.status == VoiceToTextTask::Converting) {
+                // 任务还在进行中，显示转换中状态（使用 voiceId 定位）
+                qInfo() << "Restoring voice-to-text converting status for voiceId:" << task.voiceId;
+                emit JsContent::instance()->callJsSetVoiceTextByPath(
+                    task.voiceId, QString(), JsContent::AsrFlag::Start);
+            } else if (task.status == VoiceToTextTask::Completed && !task.resultText.isEmpty()) {
+                // 任务已完成且有结果，确保结果显示
+                qInfo() << "Task completed, ensuring result is displayed for voiceId:" << task.voiceId;
+                emit JsContent::instance()->callJsSetVoiceTextByPath(
+                    task.voiceId, task.resultText, JsContent::AsrFlag::End);
+                // 移除已处理的任务
+                VoiceToTextTaskManager::instance()->removeTask(task.voiceId);
+            } else if (task.status == VoiceToTextTask::Failed) {
+                // 任务失败，移除转换中状态
+                qInfo() << "Task failed, removing converting status for voiceId:" << task.voiceId;
+                emit JsContent::instance()->callJsSetVoiceTextByPath(
+                    task.voiceId, QString(), JsContent::AsrFlag::End);
+                // 移除已处理的任务
+                VoiceToTextTaskManager::instance()->removeTask(task.voiceId);
+            }
+        }
+    });
+
     qInfo() << "Rich text data setting finished";
 }
 
@@ -98,9 +135,35 @@ void WebRichTextManager::updateNote()
 {
     // qInfo() << "Updating note, text change flag:" << m_textChange;
     if (m_textChange) {
-        emit needUpdateNote();
+        if (m_updateInProgress) {
+            return;
+        }
+        m_updateInProgress = true;
+        m_updateRequestNoteId = m_textChangeNoteId;
+        m_updateRequestSerial = m_textChangeSerial;
+        emit needUpdateNote(m_updateRequestNoteId);
     }
     // qInfo() << "Note update finished";
+}
+
+bool WebRichTextManager::hasPendingTextChange() const
+{
+    return m_textChange;
+}
+
+int WebRichTextManager::pendingTextChangeNoteId() const
+{
+    return m_textChangeNoteId;
+}
+
+int WebRichTextManager::currentNoteId() const
+{
+    return m_noteData ? m_noteData->noteId : -1;
+}
+
+void WebRichTextManager::requestUpdateNoteNow()
+{
+    updateNote();
 }
 
 void WebRichTextManager::onUpdateNoteWithResult(VNoteItem *data, const QString &result)
@@ -108,16 +171,27 @@ void WebRichTextManager::onUpdateNoteWithResult(VNoteItem *data, const QString &
     qDebug() << "Updating note with result";
     if (!data) {
         qWarning() << "onUpdateNoteWithResult called with null data, skip";
+        m_updateInProgress = false;
+        m_updateRequestNoteId = -1;
+        m_updateRequestSerial = 0;
+        emit finishedUpdateNote();
         return;
     }
     data->htmlCode = result;
     VNoteItemOper noteOps(data);
-    if (!noteOps.updateNote()) {
+    const bool updateOk = noteOps.updateNote();
+    if (!updateOk) {
         qWarning() << "Failed to save note";
     } else {
         qDebug() << "Note saved successfully";
     }
-    m_textChange = false;
+    if (updateOk && data->noteId == m_textChangeNoteId && m_updateRequestSerial == m_textChangeSerial) {
+        m_textChange = false;
+        m_textChangeNoteId = -1;
+    }
+    m_updateInProgress = false;
+    m_updateRequestNoteId = -1;
+    m_updateRequestSerial = 0;
     emit finishedUpdateNote();
     qInfo() << "Note update with result finished";
 }
@@ -131,13 +205,15 @@ void WebRichTextManager::insertVoiceItem(const QString &voicePath, qint64 voiceS
     data.ptrVoice->voicePath = Utils::makeVoiceRelative(voicePath);
     data.ptrVoice->createTime = QDateTime::currentDateTime();
     data.ptrVoice->voiceTitle = data.ptrVoice->createTime.toString("yyyyMMdd hh.mm.ss");
+    // 为新录音生成唯一标识（UUID）
+    data.ptrVoice->voiceId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     MetaDataParser parse;
     QVariant value;
     parse.makeMetaData(&data, value);
 
     emit JsContent::instance()->callJsInsertVoice(value.toString());
-    qDebug() << "Voice item inserted successfully";
+    qDebug() << "Voice item inserted successfully, voiceId:" << data.ptrVoice->voiceId;
 }
 
 /**
@@ -164,18 +240,22 @@ void WebRichTextManager::onLoadFinsh()
 void WebRichTextManager::clearJSContent()
 {
     qDebug() << "Clearing JS content";
-    connect(JsContent::instance(), &JsContent::setDataFinsh, this, &WebRichTextManager::onSetDataFinsh);
     emit JsContent::instance()->callJsSetHtml("");
 
     // 开启100ms事件循环，保证js页面内容被刷新
     QEventLoop eveLoop;
     QTimer::singleShot(100, &eveLoop, SLOT(quit()));
     eveLoop.exec();
-    disconnect(JsContent::instance(), &JsContent::setDataFinsh, this, &WebRichTextManager::onSetDataFinsh);
     qDebug() << "JS content cleared";
 }
 
 void WebRichTextManager::onSetDataFinsh()
 {
     qInfo() << "Set data finished";
+    if (!m_setFocus) {
+        return;
+    }
+
+    m_setFocus = false;
+    emit JsContent::instance()->callJsFocusEditor();
 }

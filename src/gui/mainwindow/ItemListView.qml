@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2024-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -16,13 +16,17 @@ import org.deepin.dtk 1.0
 Item {
     id: rootItem
 
+    property bool isDragging: false
     property bool isPlay: false
     property bool isRecordingAudio: false
     property bool isSearch: false
     property bool isSearching: false
+    property bool isVoiceToText: false
     property int itemSpacing: 6
     property alias model: itemModel
     property alias moveToFolderDialog: dialogWindow
+    property var sourceFolderModel
+    property int currentFolderIndex: -1
     property var saveFilters: ["TXT(*.txt);;HTML(*.html)", "TXT(*.txt)", "HTML(*.html)", "MP3(*.mp3)"]
     property alias searchLoader: noSearchResultsLoader
     property int selectSize: 0
@@ -30,6 +34,8 @@ Item {
     property int topSize: 0
     property alias view: itemListView
     property bool webVisible: true
+    property Item scrollBarParent: null
+    property int scrollBarRightAnchor: 0
 
     signal deleteFinished
     signal deleteNotes(int number)
@@ -43,13 +49,49 @@ Item {
         itemListView.currentIndex = index;
     }
 
+    function validSelectedNoteIndexes() {
+        var indexes = [];
+        var seen = {};
+        for (var i = 0; i < selectedNoteItem.length; i++) {
+            var idx = Number(selectedNoteItem[i]);
+            if (idx >= 0 && idx < itemModel.count && !seen[idx]) {
+                indexes.push(idx);
+                seen[idx] = true;
+            }
+        }
+        return indexes;
+    }
+
+    function clearRenameState() {
+        forceActiveFocus();
+        for (var i = 0; i < itemModel.count; i++) {
+            var item = itemListView.itemAtIndex(i);
+            if (item)
+                item.isRename = false;
+        }
+    }
+
+    function selectNoteItem(index) {
+        if (index < 0 || index >= itemModel.count)
+            return;
+
+        selectedNoteItem = [index];
+        selectSize = 1;
+        itemListView.currentIndex = index;
+        itemListView.lastCurrentIndex = index;
+    }
+
     function onDeleteNote() {
-        if (webVisible) {
+        if (webVisible || isVoiceToText) {
             console.log("No notes available, cannot delete");
             return;
         }
+
+        var validIndexes = validSelectedNoteIndexes();
+        if (validIndexes.length === 0)
+            return;
         
-        messageDialogLoader.messageData = selectedNoteItem.length;
+        messageDialogLoader.messageData = validIndexes.length;
         if (messageDialogLoader.active) {
             messageDialogLoader.item.show();
         }
@@ -57,27 +99,47 @@ Item {
             if (!ret) {
                 return;
             }
-            var delList = itemListView.sortAndDeduplicate(selectedNoteItem);
+            clearRenameState();
+            var delList = itemListView.sortAndDeduplicate(validSelectedNoteIndexes());
             var delIdList = [];
             var deleIndex = Number.MAX_SAFE_INTEGER;
             for (var i = 0; i < delList.length; i++) {
-                delIdList.push(itemModel.get(delList[i]).noteId);
-                itemModel.remove(delList[i]);
-                if (selectedNoteItem[i] < deleIndex)
-                    deleIndex = selectedNoteItem[i];
+                var deleteItem = itemModel.get(delList[i]);
+                if (!deleteItem)
+                    continue;
+                delIdList.push(deleteItem.noteId);
+                if (delList[i] < deleIndex)
+                    deleIndex = delList[i];
             }
-            VNoteMainManager.deleteNote(delIdList);
-            deleteNotes(selectedNoteItem.length);
+            if (delIdList.length === 0)
+                return;
+            if (!VNoteMainManager.deleteNote(delIdList))
+                return;
+            var delIdMap = {};
+            for (var k = 0; k < delIdList.length; ++k)
+                delIdMap[delIdList[k]] = true;
+            for (var j = itemModel.count - 1; j >= 0; --j) {
+                var note = itemModel.get(j);
+                if (note && delIdMap[note.noteId])
+                    itemModel.remove(j);
+            }
+            deleteNotes(delIdList.length);
             if (itemModel.count === 0) {
                 selectedNoteItem = [];
                 selectSize = 0;
                 emptyItemList();
             } else if (itemModel.count <= deleIndex) {
-                itemListView.itemAtIndex(itemModel.count - 1).isSelected = true;
-                selectedNoteItem = [itemModel.count - 1];
-                noteItemChanged(itemModel.get(itemModel.count - 1).noteId);
+                var newIndex = itemModel.count - 1;
+                selectedNoteItem = [newIndex];
+                selectSize = 1;
+                itemListView.currentIndex = newIndex;
+                itemListView.lastCurrentIndex = newIndex;
+                noteItemChanged(itemModel.get(newIndex).noteId);
             } else {
-                itemListView.itemAtIndex(deleIndex).isSelected = true;
+                selectedNoteItem = [deleIndex];
+                selectSize = 1;
+                itemListView.currentIndex = deleIndex;
+                itemListView.lastCurrentIndex = deleIndex;
                 noteItemChanged(itemModel.get(deleIndex).noteId);
             }
             gc();
@@ -85,17 +147,47 @@ Item {
         });
     }
 
+    function refreshMoveFolderModel() {
+        moveFolderModel.clear();
+        if (!sourceFolderModel)
+            return;
+
+        for (var i = 0; i < sourceFolderModel.count; i++) {
+            if (i === currentFolderIndex)
+                continue;
+
+            var folder = sourceFolderModel.get(i);
+            moveFolderModel.append({
+                name: folder.name,
+                icon: folder.icon,
+                folderId: folder.folderId
+            });
+        }
+    }
+
     function onMoveNote() {
-        if (webVisible) {
+        if (webVisible || isVoiceToText) {
             console.log("No notes available, cannot move");
             return;
         }
+
+        var validIndexes = validSelectedNoteIndexes();
+        if (validIndexes.length === 0)
+            return;
+
+        refreshMoveFolderModel();
+        if (moveFolderModel.count === 0) {
+            console.log("No other notebook available to move to");
+            return;
+        }
+        clearRenameState();
         
         var desText = "";
-        if (selectedNoteItem.length > 1) {
-            desText = qsTr("move ") + selectedNoteItem.length + qsTr(" notes to :");
+        if (validIndexes.length > 1) {
+            desText = qsTr("move ") + validIndexes.length + qsTr(" notes to :");
         } else {
-            desText = qsTr("move ") + itemModel.get(itemListView.contextIndex).name + qsTr(" note to :");
+            var index = itemListView.contextIndex >= 0 && itemListView.contextIndex < itemModel.count ? itemListView.contextIndex : validIndexes[0];
+            desText = qsTr("move ") + itemModel.get(index).name + qsTr(" note to :");
         }
         dialogWindow.name = desText;
         dialogWindow.show();
@@ -106,6 +198,8 @@ Item {
             console.log("No notes available, cannot save audio");
             return;
         }
+        if (validSelectedNoteIndexes().length === 0)
+            return;
         
         folderDialogLoader.saveType = VNoteMainManager.Voice;
         if (!folderDialogLoader.active) {
@@ -120,8 +214,12 @@ Item {
             console.log("No notes available, cannot save note");
             return;
         }
+
+        var validIndexes = validSelectedNoteIndexes();
+        if (validIndexes.length === 0)
+            return;
         
-        if (selectedNoteItem.length > 1) {
+        if (validIndexes.length > 1) {
             folderDialogLoader.saveType = VNoteMainManager.Text;
             if (!folderDialogLoader.active) {
                 folderDialogLoader.active = true;
@@ -136,9 +234,13 @@ Item {
     }
 
     function renameCurrentItem() {
-        if (selectedNoteItem.length !== 1)
+        var validIndexes = validSelectedNoteIndexes();
+        if (validIndexes.length !== 1)
             return;
-        itemListView.itemAtIndex(selectedNoteItem[0]).isRename = true;
+        var item = itemListView.itemAtIndex(validIndexes[0]);
+        if (!item)
+            return;
+        item.isRename = true;
     }
 
     function cancelRename() {
@@ -155,10 +257,13 @@ Item {
         if (selectedNoteItem.length === 0)
             return;
         // 保持与右键逻辑一致：刷新 contextIndex、检查语音可用性和文本内容
-        itemListView.contextIndex = selectedNoteItem[0];
+        var validIndexes = validSelectedNoteIndexes();
+        if (validIndexes.length === 0)
+            return;
+        itemListView.contextIndex = validIndexes[0];
         var list = [];
-        for (var i = 0; i < selectedNoteItem.length; i++) {
-            list.push(itemModel.get(selectedNoteItem[i]).noteId);
+        for (var i = 0; i < validIndexes.length; i++) {
+            list.push(itemModel.get(validIndexes[i]).noteId);
         }
         VNoteMainManager.checkNoteVoice(list);
         VNoteMainManager.checkNoteText(list);
@@ -180,50 +285,32 @@ Item {
         switch (event.key) {
          case Qt.Key_Up:
              if (itemListView.count > 0) {
-                 // 取消之前选中项的选中状态
-                 if (selectedNoteItem.length === 1) {
-                     var prevItem = itemListView.itemAtIndex(selectedNoteItem[0]);
-                     if (prevItem) prevItem.isSelected = false;
-                 }
-                 // 循环切换：如果在第一项，跳到最后一项；否则向上移动
                  if (itemListView.currentIndex <= 0) {
                      itemListView.currentIndex = itemListView.count - 1;
                  } else {
                      itemListView.currentIndex--;
                  }
-                 var newItem = itemListView.itemAtIndex(itemListView.currentIndex);
-                 if (newItem) {
-                     newItem.isSelected = true;
-                     selectedNoteItem = [itemListView.currentIndex];
-                     noteItemChanged(itemModel.get(itemListView.currentIndex).noteId);
-                 }
+                 selectedNoteItem = [itemListView.currentIndex];
+                 selectSize = 1;
+                 noteItemChanged(itemModel.get(itemListView.currentIndex).noteId);
              }
              event.accepted = true;
              break;
          case Qt.Key_Down:
              if (itemListView.count > 0) {
-                 // 取消之前选中项的选中状态
-                 if (selectedNoteItem.length === 1) {
-                     var prevItem = itemListView.itemAtIndex(selectedNoteItem[0]);
-                     if (prevItem) prevItem.isSelected = false;
-                 }
-                 // 循环切换：如果在最后一项，跳到第一项；否则向下移动
                  if (itemListView.currentIndex >= itemListView.count - 1) {
                      itemListView.currentIndex = 0;
                  } else {
                      itemListView.currentIndex++;
                  }
-                 var newItem = itemListView.itemAtIndex(itemListView.currentIndex);
-                 if (newItem) {
-                     newItem.isSelected = true;
-                     selectedNoteItem = [itemListView.currentIndex];
-                     noteItemChanged(itemModel.get(itemListView.currentIndex).noteId);
-                 }
+                 selectedNoteItem = [itemListView.currentIndex];
+                 selectSize = 1;
+                 noteItemChanged(itemModel.get(itemListView.currentIndex).noteId);
              }
              event.accepted = true;
              break;
         case Qt.Key_Delete:
-            if (webVisible || isRecordingAudio || isPlay) {
+            if (rootItem.isDragging || webVisible || isRecordingAudio || isPlay || isVoiceToText) {
                 console.log("No notes available, cannot delete");
                 return;
             }
@@ -235,7 +322,22 @@ Item {
         }
     }
     onSelectSizeChanged: {
-        mulChoices(selectSize);
+        var validIndexes = validSelectedNoteIndexes();
+        if (selectSize !== validIndexes.length) {
+            selectedNoteItem = validIndexes;
+            selectSize = validIndexes.length;
+            return;
+        }
+
+        mulChoices(validIndexes.length);
+        if (validIndexes.length > 1) {
+            var list = [];
+            for (var i = 0; i < validIndexes.length; i++) {
+                list.push(itemModel.get(validIndexes[i]).noteId);
+            }
+            VNoteMainManager.checkNoteVoice(list);
+            VNoteMainManager.checkNoteText(list);
+        }
     }
 
     ListModel {
@@ -243,15 +345,32 @@ Item {
 
     }
 
+    ListModel {
+        id: moveFolderModel
+
+    }
+
     MoveDialog {
         id: dialogWindow
 
+        folderModel: moveFolderModel
+
         onMoveToFolder: {
-            var indexList = [];
-            for (var i = 0; i < selectedNoteItem.length; i++) {
-                indexList.push(itemModel.get(selectedNoteItem[i]).noteId);
+            if (isVoiceToText) {
+                console.log("Cannot move note while voice to text is in progress");
+                return;
             }
-            VNoteMainManager.moveNotes(indexList, index);
+            var indexList = [];
+            var validIndexes = validSelectedNoteIndexes();
+            for (var i = 0; i < validIndexes.length; i++) {
+                var moveItem = itemModel.get(validIndexes[i]);
+                if (moveItem)
+                    indexList.push(moveItem.noteId);
+            }
+            if (indexList.length === 0)
+                return;
+            var folderId = moveFolderModel.get(index).folderId;
+            VNoteMainManager.moveNotesToFolderId(indexList, folderId);
         }
     }
 
@@ -311,12 +430,13 @@ Item {
                 }
                 
                 var defaultFileName = "";
-                if (selectedNoteItem.length > 0 && itemModel.get(selectedNoteItem[0])) {
+                var validIndexes = validSelectedNoteIndexes();
+                if (validIndexes.length > 0 && itemModel.get(validIndexes[0])) {
                     // 在搜索模式下使用纯文本标题，避免HTML标签出现在文件名中
                     if (isSearch) {
-                        defaultFileName = VNoteMainManager.getNotePlainTitle(itemModel.get(selectedNoteItem[0]).noteId);
+                        defaultFileName = VNoteMainManager.getNotePlainTitle(itemModel.get(validIndexes[0]).noteId);
                     } else {
-                        defaultFileName = itemModel.get(selectedNoteItem[0]).name;
+                        defaultFileName = itemModel.get(validIndexes[0]).name;
                     }
                     if (saveType === VNoteMainManager.Text && !defaultFileName.toLowerCase().endsWith('.txt')) {
                         defaultFileName += '.txt';
@@ -339,8 +459,9 @@ Item {
             }
             onAccepted: {
                 var idList = [];
-                for (var i = 0; i < selectedNoteItem.length; i++) {
-                    idList.push(itemModel.get(selectedNoteItem[i]).noteId);
+                var validIndexes = validSelectedNoteIndexes();
+                for (var i = 0; i < validIndexes.length; i++) {
+                    idList.push(itemModel.get(validIndexes[i]).noteId);
                 }
                 
                 var selectedFileUrl;
@@ -432,8 +553,9 @@ Item {
             }
             onAccepted: {
                 var list = [];
-                for (var i = 0; i < selectedNoteItem.length; i++) {
-                    list.push(itemModel.get(selectedNoteItem[i]).noteId);
+                var validIndexes = validSelectedNoteIndexes();
+                for (var i = 0; i < validIndexes.length; i++) {
+                    list.push(itemModel.get(validIndexes[i]).noteId);
                 }
                 
                 var selectedFolderUrl;
@@ -497,16 +619,19 @@ Item {
         menuType: ActionManager.NoteCtxMenu
 
         onAboutToShow: {
-            var setTop = true;
-            if (itemModel.get(itemListView.contextIndex).isTop === "top") {
-                setTop = false;
+            var contextValid = itemListView.contextIndex >= 0 && itemListView.contextIndex < itemModel.count;
+            if (contextValid) {
+                var setTop = true;
+                if (itemModel.get(itemListView.contextIndex).isTop === "top") {
+                    setTop = false;
+                }
+                var topItem = ActionManager.getActionById(ActionManager.NoteTop);
+                topItem.text = setTop ? qsTr("Sticky on Top") : qsTr("Unpin");
             }
-            var topItem = ActionManager.getActionById(ActionManager.NoteTop);
-            topItem.text = setTop ? qsTr("Sticky on Top") : qsTr("Unpin");
 
             ActionManager.enableVoicePlayActions(!isPlay && !isRecordingAudio);
-            // 录音或播放中禁用删除
-            ActionManager.enableAction(ActionManager.NoteDelete, !isRecordingAudio && !isPlay);
+            // 录音、播放或语音转文字中禁用删除
+            ActionManager.enableAction(ActionManager.NoteDelete, !isRecordingAudio && !isPlay && !isVoiceToText);
             
             // 在搜索状态下禁用移动、置顶和新建笔记选项
             if (isSearching) {
@@ -514,10 +639,10 @@ Item {
                 ActionManager.enableAction(ActionManager.NoteTop, false);
                 ActionManager.enableAction(ActionManager.NoteAddNew, false);
             } else {
-                // 录音或播放时禁用移动和新建（会影响当前笔记），但置顶保持可用
-                ActionManager.enableAction(ActionManager.NoteMove, !isRecordingAudio && !isPlay);
-                ActionManager.enableAction(ActionManager.NoteTop, true);  // 置顶是轻量操作，始终可用
-                ActionManager.enableAction(ActionManager.NoteAddNew, !isRecordingAudio && !isPlay);
+                // 录音、播放或语音转文字时禁用移动和新建（会影响当前笔记），但置顶保持可用
+                ActionManager.enableAction(ActionManager.NoteMove, !isRecordingAudio && !isPlay && !isVoiceToText);
+                ActionManager.enableAction(ActionManager.NoteTop, contextValid);  // 置顶是轻量操作，当前项有效时可用
+                ActionManager.enableAction(ActionManager.NoteAddNew, !isRecordingAudio && !isPlay && !isVoiceToText);
             }
             
             // 录音时保存语音菜单置灰，但重命名、置顶和保存笔记保持可用
@@ -534,12 +659,16 @@ Item {
             
             switch (actionId) {
             case ActionManager.NoteRename:
+                if (itemListView.contextIndex < 0 || itemListView.contextIndex >= itemModel.count)
+                    return;
                 var currentItem = itemListView.itemAtIndex(itemListView.contextIndex);
                 if (currentItem) {
                     currentItem.isRename = true;
                 }
                 break;
             case ActionManager.NoteTop:
+                if (itemListView.contextIndex < 0 || itemListView.contextIndex >= itemModel.count)
+                    return;
                 var setTop = true;
                 if (itemModel.get(itemListView.contextIndex).isTop === "top") {
                     setTop = false;
@@ -557,7 +686,11 @@ Item {
                 break;
             case ActionManager.SaveNoteAsHtml:
                 onTriggered: {
-                    if (selectedNoteItem.length > 1) {
+                    var validIndexes = validSelectedNoteIndexes();
+                    if (validIndexes.length === 0)
+                        return;
+
+                    if (validIndexes.length > 1) {
                         folderDialogLoader.saveType = VNoteMainManager.Html;
                         if (!folderDialogLoader.active) {
                             folderDialogLoader.active = true;
@@ -655,12 +788,21 @@ Item {
         spacing: itemSpacing
         visible: true
 
+        ScrollBar.vertical: ScrollBar {
+            id: verticalScrollBar
+
+            parent: rootItem.scrollBarParent ? rootItem.scrollBarParent : itemListView
+            x: rootItem.scrollBarParent ? rootItem.scrollBarRightAnchor - width : parent.width - width
+            y: 0
+            height: parent.height
+        }
+
         delegate: Rectangle {
             id: rootItemDelegate
 
             property bool hovered: false
             property bool isRename: false
-            property bool isSelected: false
+            property bool isSelected: selectedNoteItem.indexOf(index) !== -1
             property var startMove: [-1, -1]
 
             color: isSelected ? (rootItem.activeFocus ? palette.highlight : (DTK.themeType === ApplicationHelper.LightType ? "#33000000" : "#33FFFFFF")) : (DTK.themeType === ApplicationHelper.LightType ? "white" : "#0CFFFFFF")
@@ -683,9 +825,21 @@ Item {
             radius: 6
             width: itemListView.width
 
-            Component.onCompleted: {
-                isSelected = (selectedNoteItem.indexOf(index) !== -1);
+            // 与 DccItemBackground 一致：卡片底部 1px 淡阴影
+            BoxShadow {
+                anchors.fill: parent
+                cornerRadius: rootItemDelegate.radius
+                hollow: true
+                shadowBlur: 0
+                shadowColor: DTK.themeType === ApplicationHelper.LightType ? Qt.rgba(0, 0, 0, 0.05)
+                                                                           : Qt.rgba(0, 0, 0, 0.3)
+                shadowOffsetX: 0
+                shadowOffsetY: 1
+                spread: 0
+                visible: !rootItemDelegate.isSelected
+                z: -1
             }
+
             Keys.onPressed: function(event) {
                 if (isRename) {
                     if (event.key === Qt.Key_Escape) {
@@ -883,6 +1037,8 @@ Item {
 
                 property bool held: false
 
+                onHeldChanged: rootItem.isDragging = held
+
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 anchors.fill: parent
                 drag.target: this
@@ -896,27 +1052,23 @@ Item {
                             return;
                         }
                         
-                        if (selectedNoteItem.length > 1) {
+                        var selectedIndexes = validSelectedNoteIndexes();
+                        if (selectedIndexes.length > 1) {
                             ActionManager.visibleMulChoicesActions(false);
                         } else {
-                            if (itemListView.itemAtIndex(itemListView.lastCurrentIndex)) {
-                                var lastItem = itemListView.itemAtIndex(itemListView.lastCurrentIndex);
-                                lastItem.isRename = false;
-                                lastItem.isSelected = false;
-                            }
-                            var item = itemListView.itemAtIndex(selectedNoteItem[0]);
-                            item.isSelected = false;
+                            if (itemListView.itemAtIndex(itemListView.lastCurrentIndex))
+                                itemListView.itemAtIndex(itemListView.lastCurrentIndex).isRename = false;
                             selectedNoteItem = [index];
                             selectSize = 1;
-                            itemListView.itemAtIndex(index).isSelected = true;
                             itemListView.currentIndex = index;
                             itemListView.lastCurrentIndex = index;
                             itemListView.contextIndex = index;
                             ActionManager.visibleMulChoicesActions(true);
                         }
                         var list = [];
-                        for (var i = 0; i < selectedNoteItem.length; i++) {
-                            list.push(itemModel.get(selectedNoteItem[i]).noteId);
+                        var validIndexes = validSelectedNoteIndexes();
+                        for (var i = 0; i < validIndexes.length; i++) {
+                            list.push(itemModel.get(validIndexes[i]).noteId);
                         }
                         VNoteMainManager.checkNoteVoice(list);
                         VNoteMainManager.checkNoteText(list);
@@ -937,55 +1089,45 @@ Item {
                         }
                         switch (mouse.modifiers) {
                         case Qt.ControlModifier:
-                            if (selectedNoteItem.indexOf(index) != -1) {
-                                var existed = itemListView.itemAtIndex(index);
-                                if (existed) existed.isSelected = false;
-                                selectedNoteItem.splice(selectedNoteItem.indexOf(index), 1);
-                                selectSize--;
-                            } else {
-                                var exist2 = itemListView.itemAtIndex(index);
-                                if (exist2) exist2.isSelected = true;
-                                selectedNoteItem.push(index);
-                                selectSize++;
-                            }
+                            var nextSelection = selectedNoteItem.slice();
+                            var pos = nextSelection.indexOf(index);
+                            if (pos != -1)
+                                nextSelection.splice(pos, 1);
+                            else
+                                nextSelection.push(index);
+                            selectedNoteItem = nextSelection;
+                            selectSize = validSelectedNoteIndexes().length;
                             break;
                         case Qt.ShiftModifier:
-                            selectedNoteItem = [];
-                            selectSize = 0;
-                            var startIndex = Math.min(index, itemListView.lastCurrentIndex);
-                            var endIndex = Math.max(index, itemListView.lastCurrentIndex);
-                            for (var i = startIndex; i <= endIndex; i++) {
-                                var d = itemListView.itemAtIndex(i);
-                                if (d) d.isSelected = true;
-                                selectedNoteItem.push(i);
-                                selectSize++;
-                            }
+                            var anchorIndex = Math.max(0, Math.min(itemListView.lastCurrentIndex, itemModel.count - 1));
+                            var targetIndex = Math.max(0, Math.min(index, itemModel.count - 1));
+                            var startIndex = Math.min(targetIndex, anchorIndex);
+                            var endIndex = Math.max(targetIndex, anchorIndex);
+                            var rangeSelection = [];
+                            for (var i = startIndex; i <= endIndex; i++)
+                                rangeSelection.push(i);
+                            selectedNoteItem = rangeSelection;
+                            itemListView.lastCurrentIndex = anchorIndex;
+                            selectSize = rangeSelection.length;
                             break;
                         default:
-                            if (itemListView.itemAtIndex(itemListView.lastCurrentIndex)) {
-                                var lastSelectItem = itemListView.itemAtIndex(itemListView.lastCurrentIndex);
-                                lastSelectItem.isRename = false;
-                                lastSelectItem.isSelected = false;
-                            }
-                            for (var m = 0; m < selectedNoteItem.length; m++) {
-                                var selectItem = itemListView.itemAtIndex(selectedNoteItem[m]);
-                                if (selectItem) selectItem.isSelected = false;
-                            }
+                            if (itemListView.itemAtIndex(itemListView.lastCurrentIndex))
+                                itemListView.itemAtIndex(itemListView.lastCurrentIndex).isRename = false;
                             selectedNoteItem = [index];
                             selectSize = 1;
-                            var newDelegate = itemListView.itemAtIndex(index);
-                            if (newDelegate) newDelegate.isSelected = true;
                             itemListView.currentIndex = index;
                             itemListView.lastCurrentIndex = index;
                             noteItemChanged(Number(itemModel.get(index).noteId));
-                            
+
                             break;
                         }
                     }
                 }
                 onDoubleClicked: {
                     // 录音时允许双击重命名
-                    itemListView.itemAtIndex(index).isRename = true;
+                    var renameItem = itemListView.itemAtIndex(index);
+                    if (renameItem)
+                        renameItem.isRename = true;
                 }
                 onEntered: {
                     if (noteNameLabel.implicitWidth > noteNameLabel.width)
@@ -1008,10 +1150,11 @@ Item {
                             return;
                         }
                     }
-                    if (itemModel.get(selectedNoteItem[0])) {
+                    var validIndexes = validSelectedNoteIndexes();
+                    if (validIndexes.length > 0 && itemModel.get(validIndexes[0])) {
                         var globPos = mapToGlobal(mouse.x, mouse.y);
-                        dragControl.itemNumber = selectedNoteItem.length;
-                        dragControl.itemText = itemModel.get(selectedNoteItem[0]).name;
+                        dragControl.itemNumber = validIndexes.length;
+                        dragControl.itemText = itemModel.get(validIndexes[0]).name;
                         dragControl.visible = true;
                         dragControl.x = globPos.x;
                         dragControl.y = globPos.y;
@@ -1077,12 +1220,17 @@ Item {
 
             delegate: Rectangle {
                 color: "transparent"
-                height: section == "top" ? (18) : 16
+                height: section == "top" ? Math.max(18, Math.ceil(sectionStickyFontMetrics.height) + 6) : 16
                 width: parent.width
+
+                FontMetrics {
+                    id: sectionStickyFontMetrics
+                    font.pixelSize: 12
+                }
 
                 RowLayout {
                     anchors.left: parent.left
-                    anchors.top: parent.top
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 4
                     visible: section == "top" && !isSearch
                     
@@ -1101,6 +1249,7 @@ Item {
                     Text {
                         color: "#b3000000"
                         font.pixelSize: 12
+                        verticalAlignment: Text.AlignVCenter
                         text: qsTr("Sticky Notes")
                     }
                 }

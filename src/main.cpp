@@ -1,5 +1,5 @@
-// Copyright (C) 2020 ~ 2020 Deepin Technology Co., Ltd.
-// SPDX-FileCopyrightText: 2023 UnionTech Software Technology Co., Ltd.
+// Copyright (C) 2020 - 2026 Deepin Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2023 - 2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,6 +9,8 @@
 #include "common/imageprovider.h"
 #include "common/vtextspeechandtrmanager.h"
 
+#include "importolddata/dbmigration/migrationorchestrator.h"  // TTP-020 后台全量迁移任务编排层
+#include "common/migrationviewcontroller.h"  // TTP-021 升级进度界面控制器
 #include "config.h"
 
 #include <QQmlApplicationEngine>
@@ -44,6 +46,20 @@
 DWIDGET_USE_NAMESPACE
 DCORE_USE_NAMESPACE
 
+static void activateExistingInstanceViaDBus()
+{
+    QDBusInterface iface("org.deepin.voicenote",
+                         "/org/deepin/voicenote",
+                         "org.deepin.voicenote",
+                         QDBusConnection::sessionBus());
+    if (iface.isValid()) {
+        qInfo() << "Calling ActivateWindow on existing instance via D-Bus";
+        iface.asyncCall("ActivateWindow");
+    } else {
+        qWarning() << "D-Bus interface not available:" << QDBusConnection::sessionBus().lastError().message();
+    }
+}
+
 int main(int argc, char *argv[])
 {
 #ifdef __mips64
@@ -51,6 +67,10 @@ int main(int argc, char *argv[])
     qputenv("DTK_DISABLE_DCONFIG_CACHE", "1");
     qputenv("DTK_FORCE_SYNC_DCONFIG", "1");
     qDebug() << "MIPS64: Applied DTK configuration workarounds";
+#endif
+
+#ifdef __sw_64__
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--js-flags=--jitless");
 #endif
 
     DApplication *app = new DApplication(argc, argv);
@@ -63,6 +83,7 @@ int main(int argc, char *argv[])
         DGuiApplicationHelper::instance()->setSingleInstanceInterval(-1);
         if (!DGuiApplicationHelper::instance()->setSingleInstance(app->applicationName(), DGuiApplicationHelper::UserScope)) {
             qWarning() << "Another instance of deepin-voice-note is already running";
+            activateExistingInstanceViaDBus();
             QCoreApplication::exit(0);
         }
     });
@@ -70,6 +91,7 @@ int main(int argc, char *argv[])
     DGuiApplicationHelper::instance()->setSingleInstanceInterval(-1);
     if (!DGuiApplicationHelper::instance()->setSingleInstance(app->applicationName(), DGuiApplicationHelper::UserScope)) {
         qWarning() << "Another instance of deepin-voice-note is already running";
+        activateExistingInstanceViaDBus();
         return 0;
     }
 #endif
@@ -116,6 +138,10 @@ int main(int argc, char *argv[])
 
     VNoteMainManager::instance()->initNote();
     qInfo() << "Note manager initialized";
+
+    // TTP-020: DB 就绪后单行启动后台 Tiptap 全量迁移任务（两套状态独立，不干扰旧库升级）。
+    // TTP-021: 通过升级进度界面控制器启动迁移（内部拉起 TTP-020 编排器并消费进度/终态信号）。
+    MigrationViewController::instance()->start();
 
     DLogManager::registerConsoleAppender();
     DLogManager::registerFileAppender();

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2024-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,18 +9,25 @@ import VNote 1.0
 import "../drag/"
 import "../dialog/"
 import org.deepin.dtk 1.0
+import org.deepin.dtk.style 1.0 as DS
 
 Item {
     id: root
 
     property int currentDropIndex: -1
+    property bool isDragging: false
     property bool isPlay: false
-    property bool isRecordingAudio: false 
-    property int itemHeight: 30
+    property bool isRecordingAudio: false
+    property bool isVoiceToText: false
+    readonly property int itemVerticalPadding: (DS.Style.control.padding - DS.Style.control.borderWidth) * 2
+    property int itemHeight: Math.max(30, folderItemFontMetrics.height + itemVerticalPadding)
     property int lastDropIndex: -1
     property int listHeight: 700
     property int listWidth: 200
     property alias model: folderListView.model
+    property alias currentFolderIndex: folderListView.currentIndex
+    property Item scrollBarParent: null
+    property int scrollBarRightAnchor: 0
     property bool webVisible: true
 
     signal emptyItemList(bool isEmpty)
@@ -28,6 +35,10 @@ Item {
     signal itemChanged(int index, string name)
     signal mouseChanged(int mousePosX, int mousePosY)
     signal updateFolderName(string name)
+
+    FontMetrics {
+        id: folderItemFontMetrics
+    }
 
     function addFolder() {
         VNoteMainManager.vNoteCreateFolder();
@@ -51,17 +62,24 @@ Item {
             console.log("FolderListView: dropItems ignored while recording");
         } else if (isPlay) {
             console.log("FolderListView: dropItems ignored while playing");
-        } else if (currentDropIndex != -1) {
-            VNoteMainManager.moveNotes(selectedNoteItem, currentDropIndex);
+        } else if (isVoiceToText) {
+            console.log("FolderListView: dropItems ignored while voice to text is in progress");
+        } else if (currentDropIndex != -1 && currentDropIndex < folderListView.model.count) {
+            var dstFolderId = folderListView.model.get(currentDropIndex).folderId;
+            VNoteMainManager.moveNotesToFolderId(selectedNoteItem, dstFolderId);
         }
         if (lastDropIndex != -1 && lastDropIndex != folderListView.currentIndex && folderListView.itemAtIndex(lastDropIndex)) {
             folderListView.itemAtIndex(lastDropIndex).isHovered = false;
         }
         lastDropIndex = -1;
         currentDropIndex = -1;
+        folderListView.hoverIndex = -1;
+        hideScrollHintLine();
     }
 
     function getCurrentFolder() {
+        if (folderListView.currentIndex < 0 || folderListView.currentIndex >= folderListView.model.count)
+            return null;
         return folderListView.model.get(folderListView.currentIndex);
     }
 
@@ -78,6 +96,38 @@ Item {
         }
     }
 
+
+    function deleteFolderAtIndex(deleteIndex) {
+        if (deleteIndex < 0 || deleteIndex >= folderModel.count)
+            return;
+
+        var folderId = folderModel.get(deleteIndex).folderId;
+        if (!VNoteMainManager.vNoteDeleteFolderById(folderId))
+            return;
+
+        var oldCurrentIndex = folderListView.currentIndex;
+        var currentFolderId = oldCurrentIndex >= 0 && oldCurrentIndex < folderModel.count
+                ? folderModel.get(oldCurrentIndex).folderId : -1;
+        var deletingCurrentFolder = Number(currentFolderId) === Number(folderId);
+        folderModel.remove(deleteIndex);
+        if (folderModel.count === 0) {
+            folderListView.currentIndex = -1;
+            folderListView.lastCurrentIndex = -1;
+            folderListView.contextIndex = -1;
+            folderEmpty();
+            return;
+        }
+
+        var nextIndex = folderListView.indexOfFolderId(currentFolderId);
+        if (nextIndex === -1)
+            nextIndex = Math.min(deleteIndex, folderModel.count - 1);
+        folderListView.currentIndex = nextIndex;
+        folderListView.lastCurrentIndex = nextIndex;
+        folderListView.contextIndex = nextIndex;
+        if (deletingCurrentFolder && oldCurrentIndex === nextIndex)
+            root.itemChanged(nextIndex, folderModel.get(nextIndex).name);
+    }
+
     function showContextMenuOnCurrentItem() {
         // 在当前选中项位置弹出文件夹右键菜单
         if (folderListView.currentIndex < 0 || folderListView.currentIndex >= folderListView.count)
@@ -92,47 +142,69 @@ Item {
     function rollDown() {
         if (!scrollTimer.isUp && scrollTimer.running)
             return;
-        if (folderListView.contentY + folderListView.height < folderListView.contentHeight) {
+        if (folderListView.contentY < folderListView.bottomContentY()) {
             scrollTimer.isUp = false;
+            showScrollHintLine(false);
             scrollTimer.running = true;
+        } else {
+            hideScrollHintLine();
         }
     }
 
     function rollStop() {
         scrollTimer.running = false;
+        hideScrollHintLine();
     }
 
     function rollUp() {
         if (scrollTimer.isUp && scrollTimer.running)
             return;
-        if (folderListView.contentY > 0) {
+        if (folderListView.contentY > folderListView.topContentY()) {
             scrollTimer.isUp = true;
+            showScrollHintLine(true);
             scrollTimer.running = true;
+        } else {
+            hideScrollHintLine();
         }
+    }
+
+    function showScrollHintLine(isUp) {
+        scrollHintLine.y = isUp ? 0 : Math.max(0, height - scrollHintLine.implicitHeight);
+        scrollHintLine.visible = true;
+    }
+
+    function hideScrollHintLine() {
+        scrollHintLine.visible = false;
     }
 
     function toggleSearch(isSearch) {
         if (!isSearch) {
             var index = folderListView.currentIndex;
+            if (index < 0 || index >= folderModel.count)
+                return;
             itemChanged(index, folderModel.get(index).name); // 发出 itemChanged 信号
         }
     }
 
     function updateItems(mousePosX, mousePosY) {
+        folderListView.lastDragMouseX = mousePosX;
+        folderListView.lastDragMouseY = mousePosY;
+        folderListView.sortingFolder = false;
         var pos = mapFromGlobal(mousePosX, mousePosY);
         if (pos.x < 0 || pos.x > listWidth) {
             if (currentDropIndex != -1)
                 currentDropIndex = -1;
+            folderListView.hoverIndex = -1;
             if (lastDropIndex != -1 && lastDropIndex != folderListView.currentIndex && folderListView.itemAtIndex(lastDropIndex)) {
                 folderListView.itemAtIndex(lastDropIndex).isHovered = false;
             }
             lastDropIndex = -1;
             return;
         }
-        //判断当前鼠标所在的行
-        var startY = pos.y - 50 > 0 ? pos.y - 50 : 0;
-        var index = Math.floor((pos.y + (verticalScrollBar.position * folderModel.count * itemHeight)) / itemHeight);
+        // 判断当前鼠标所在的行，使用真实内容偏移避免自动滚动时目标行错位
+        var index = Math.floor((pos.y + folderListView.contentY - folderListView.topContentY()) / itemHeight);
         if (index < 0 || index >= folderModel.count) {
+            folderListView.hoverIndex = -1;
             if (lastDropIndex != -1 && lastDropIndex != folderListView.currentIndex && folderListView.itemAtIndex(lastDropIndex)) {
                 folderListView.itemAtIndex(lastDropIndex).isHovered = false;
             }
@@ -147,12 +219,14 @@ Item {
             }
             lastDropIndex = index;
             if (index === folderListView.currentIndex) {
+                folderListView.hoverIndex = -1;
                 return;
             }
         } else {
             return;
         }
         //更新当前行的颜色
+        folderListView.hoverIndex = index;
         if (folderListView.itemAtIndex(index)) {
             folderListView.itemAtIndex(index).isHovered = true;
         }
@@ -190,20 +264,14 @@ Item {
             event.accepted = true;
             break;
         case Qt.Key_Delete:
-            if (webVisible || isRecordingAudio || isPlay) {
+            if (root.isDragging || webVisible || isRecordingAudio || isPlay || isVoiceToText) {
                 console.log("No notes available, cannot delete folder");
                 return;
             }
             
             messageDialogLoader.showDialog(VNoteMessageDialogHandler.DeleteFolder, ret => {
                 if (ret) {
-                    VNoteMainManager.vNoteDeleteFolder(folderListView.currentIndex);
-                    if (folderModel.count === 1)
-                        folderEmpty();
-                    folderModel.remove(folderListView.currentIndex);
-                    if (folderListView.currentIndex === 0) {
-                        folderListView.currentIndex = 0;
-                    }
+                    deleteFolderAtIndex(folderListView.currentIndex);
                 }
             });
             event.accepted = true;
@@ -239,19 +307,27 @@ Item {
 
         onTriggered: {
             if (isUp) {
-                if (folderListView.contentY <= 0) {
+                var topY = folderListView.topContentY();
+                if (folderListView.contentY <= topY) {
                     running = false;
-                    folderListView.contentY = 0;
+                    folderListView.contentY = topY;
+                    hideScrollHintLine();
+                    folderListView.refreshDragTargetAfterScroll();
                     return;
                 }
-                folderListView.contentY -= 10;
+                folderListView.contentY = Math.max(topY, folderListView.contentY - 10);
+                folderListView.refreshDragTargetAfterScroll();
             } else {
-                if (folderListView.contentY + folderListView.height >= folderListView.contentHeight) {
+                var bottomY = folderListView.bottomContentY();
+                if (folderListView.contentY >= bottomY) {
                     running = false;
-                    folderListView.contentY = folderListView.contentHeight - folderListView.height;
+                    folderListView.contentY = bottomY;
+                    hideScrollHintLine();
+                    folderListView.refreshDragTargetAfterScroll();
                     return;
                 }
-                folderListView.contentY += 10;
+                folderListView.contentY = Math.min(bottomY, folderListView.contentY + 10);
+                folderListView.refreshDragTargetAfterScroll();
             }
         }
     }
@@ -268,7 +344,8 @@ Item {
             });
             folderListView.currentIndex = 0;
             folderListView.lastCurrentIndex = 0;
-            VNoteMainManager.createNote();
+            folderListView.contextIndex = 0;
+            VNoteMainManager.createNoteInFolderId(folderData.folderId);
             if (folderListView.itemAtIndex(folderListView.currentIndex + 1)) {
                 folderListView.itemAtIndex(folderListView.currentIndex + 1).isHovered = false;
             }
@@ -283,6 +360,17 @@ Item {
         implicitHeight: 3
         implicitWidth: folderListView.width
         visible: false
+        z: 2
+    }
+
+    Rectangle {
+        id: scrollHintLine
+
+        color: DTK.themeType === ApplicationHelper.LightType ? "#66000000" : "#66FFFFFF"
+        implicitHeight: 3
+        implicitWidth: folderListView.width
+        visible: false
+        z: 2
     }
 
     ListView {
@@ -290,12 +378,79 @@ Item {
 
         property var contextIndex: -1
         property int dropIndex: -1
+        property int hoverIndex: -1
+        property int lastDragMouseX: -1
+        property int lastDragMouseY: -1
         property var lastCurrentIndex: -1
+        property var dragSourceFolderId: -1
+        property bool sortingFolder: false
+
+        function topContentY() {
+            return originY;
+        }
+
+        function bottomContentY() {
+            return Math.max(topContentY(), originY + contentHeight - height);
+        }
+
+        function indexOfFolderId(folderId) {
+            for (var i = 0; i < folderModel.count; i++) {
+                if (folderModel.get(i).folderId === folderId)
+                    return i;
+            }
+            return -1;
+        }
+
+        function clearDragState() {
+            scrollTimer.running = false;
+            dropLine.visible = false;
+            dropIndex = -1;
+            currentDropIndex = -1;
+            hoverIndex = -1;
+            lastDragMouseX = -1;
+            lastDragMouseY = -1;
+            dragSourceFolderId = -1;
+            sortingFolder = false;
+            if (lastDropIndex !== -1) {
+                var item = itemAtIndex(lastDropIndex);
+                if (item)
+                    item.isHovered = false;
+            }
+            lastDropIndex = -1;
+            dragControl.visible = false;
+            dragControl.imageSource = "";
+            hideScrollHintLine();
+        }
+
+        function refreshDragTargetAfterScroll() {
+            if (lastDragMouseX < 0 || lastDragMouseY < 0)
+                return;
+
+            if (sortingFolder) {
+                indexAt(lastDragMouseX, lastDragMouseY);
+            } else if (currentDropIndex !== -1 || lastDropIndex !== -1) {
+                root.updateItems(lastDragMouseX, lastDragMouseY);
+            }
+        }
+
+        function updateDropLinePosition(lineY) {
+            var maxY = Math.max(0, height - dropLine.implicitHeight);
+            dropLine.y = Math.max(0, Math.min(lineY, maxY));
+            dropLine.visible = true;
+        }
 
         function indexAt(mousePosX, mousePosY) {
+            lastDragMouseX = mousePosX;
+            lastDragMouseY = mousePosY;
+            sortingFolder = true;
+            if (folderModel.count === 0) {
+                dropIndex = -1;
+                dropLine.visible = false;
+                return;
+            }
             var pos = mapFromGlobal(mousePosX, mousePosY);
             var startY = itemHeight * 0.5;
-            var index = Math.floor((pos.y - startY + (verticalScrollBar.position * folderModel.count * itemHeight)) / itemHeight) + 1;
+            var index = Math.floor((pos.y - startY + contentY - topContentY()) / itemHeight) + 1;
             if (index < 0) {
                 index = 0;
             }
@@ -303,12 +458,7 @@ Item {
                 index = folderModel.count;
             }
             dropIndex = index;
-            dropLine.visible = true;
-            if (folderListView.itemAtIndex(dropIndex)) {
-                dropLine.y = folderListView.itemAtIndex(dropIndex).y - folderListView.contentY;
-            } else {
-                dropLine.y = folderListView.itemAtIndex(dropIndex - 1).y + folderListView.itemAtIndex(dropIndex - 1).height - folderListView.contentY;
-            }
+            updateDropLinePosition(topContentY() + index * itemHeight - contentY);
         }
 
         anchors.fill: parent
@@ -320,6 +470,10 @@ Item {
         ScrollBar.vertical: ScrollBar {
             id: verticalScrollBar
 
+            parent: root.scrollBarParent ? root.scrollBarParent : folderListView
+            x: root.scrollBarParent ? root.scrollBarRightAnchor - width : parent.width - width
+            y: 0
+            height: parent.height
         }
         delegate: Rectangle {
             id: rootItem
@@ -333,7 +487,8 @@ Item {
             // 录音时：当前文件夹保持正常显示，其他文件夹置灰
             opacity: (isRecordingAudio && index !== folderListView.currentIndex) ? 0.5 : 1.0
 
-            color: index === folderListView.currentIndex ? (root.activeFocus ? palette.highlight : DTK.themeType === ApplicationHelper.LightType ? "#33000000" : "#33FFFFFF") : (isHovered ? (DTK.themeType === ApplicationHelper.LightType ? "#1A000000" : "#1AFFFFFF") : "transparent")
+            color: index === folderListView.currentIndex ? (root.activeFocus ? palette.highlight : DTK.themeType === ApplicationHelper.LightType ? "#33000000" : "#33FFFFFF") : (folderListView.hoverIndex === index || isHovered ? (DTK.themeType === ApplicationHelper.LightType ? "#1A000000" : "#1AFFFFFF") : "transparent")
+            clip: true
             enabled: !isPlay || index === folderListView.currentIndex
             height: itemHeight
             radius: 6
@@ -345,7 +500,7 @@ Item {
                 case Qt.Key_Return:
                     var newName = renameLine.text;
                     if (newName.length !== 0 && newName !== model.text) {
-                        VNoteMainManager.renameFolder(index, newName);
+                        VNoteMainManager.renameFolderById(model.folderId, newName);
                         model.name = newName;
                         updateFolderName(newName);
                     }
@@ -366,7 +521,6 @@ Item {
             onIsRenameChanged: {
                 renameLine.forceActiveFocus();
             }
-
             ToolTip {
                 id: folderItemTip
 
@@ -450,7 +604,7 @@ Item {
                         } else {
                             if (!rootItem.cancelRename && text.length !== 0 && text !== model.name) {
                                 model.name = text;
-                                VNoteMainManager.renameFolder(index, text);
+                                VNoteMainManager.renameFolderById(model.folderId, text);
                             } else {
                                 renameLine.text = model.name;
                             }
@@ -466,6 +620,8 @@ Item {
                     id: folderNameLabel
 
                     Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.alignment: Qt.AlignVCenter
                     color: index === folderListView.currentIndex ? (root.activeFocus ? palette.highlightedText : (DTK.themeType === ApplicationHelper.LightType ? "black" : "#B2FFFFFF")) : (DTK.themeType === ApplicationHelper.LightType ? "black" : "#B2FFFFFF")
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
@@ -477,8 +633,10 @@ Item {
                 Label {
                     id: folderCountLabel
 
+                    Layout.alignment: Qt.AlignVCenter
                     Layout.rightMargin: 10
                     color: folderNameLabel.color
+                    font.pixelSize: 12
                     horizontalAlignment: Text.AlignRight
                     text: model.count
                     verticalAlignment: Text.AlignVCenter
@@ -491,6 +649,8 @@ Item {
                 id: folderMouseArea
 
                 property bool held: false
+
+                onHeldChanged: root.isDragging = held
 
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 anchors.fill: parent
@@ -576,25 +736,46 @@ Item {
                 onPressed: function(mouse) {
                     startMove[0] = mouse.x;
                     startMove[1] = mouse.y;
+                    folderListView.dragSourceFolderId = model.folderId;
                 }
                 onReleased: {
                     startMove = [-1, -1];
                     if (held) {
                         held = false;
-                        dropLine.visible = false;
-                        dragControl.visible = false;
-                        dragControl.imageSource = "";
                         if (folderListView.dropIndex != -1) {
-                            if (folderListView.dropIndex > index) {
-                                folderListView.dropIndex -= 1;
+                            var sourceIndex = folderListView.indexOfFolderId(folderListView.dragSourceFolderId);
+                            if (sourceIndex === -1) {
+                                folderListView.clearDragState();
+                                return;
                             }
-                            if (folderListView.dropIndex != index) {
-                                var tmpIndex = index;
-                                folderModel.move(index, folderListView.dropIndex, 1);
-                                VNoteMainManager.updateSort(tmpIndex, folderListView.dropIndex);
+                            var targetIndex = folderListView.dropIndex;
+                            var currentFolderId = folderListView.currentIndex >= 0 && folderListView.currentIndex < folderModel.count
+                                    ? folderModel.get(folderListView.currentIndex).folderId : -1;
+                            if (targetIndex > sourceIndex) {
+                                targetIndex -= 1;
+                            }
+                            if (targetIndex != sourceIndex) {
+                                folderModel.move(sourceIndex, targetIndex, 1);
+                                folderListView.positionViewAtIndex(targetIndex, ListView.Contain);
+                                var currentIndexAfterMove = folderListView.indexOfFolderId(currentFolderId);
+                                if (currentIndexAfterMove !== -1) {
+                                    folderListView.currentIndex = currentIndexAfterMove;
+                                    folderListView.lastCurrentIndex = currentIndexAfterMove;
+                                    folderListView.contextIndex = currentIndexAfterMove;
+                                }
+                                var folderIds = [];
+                                for (var i = 0; i < folderModel.count; ++i)
+                                    folderIds.push(folderModel.get(i).folderId);
+                                VNoteMainManager.updateSortByFolderIds(folderIds);
                             }
                         }
+                        folderListView.clearDragState();
                     }
+                }
+                onCanceled: {
+                    startMove = [-1, -1];
+                    held = false;
+                    folderListView.clearDragState();
                 }
             }
 
@@ -610,31 +791,27 @@ Item {
                 }
 
                 MenuItem {
-                    enabled: !isPlay && !isRecordingAudio
+                    id: deleteMenuItem
+                    enabled: !root.isPlay && !root.isRecordingAudio && !root.isVoiceToText
                     text: qsTr("Delete")
 
                     onTriggered: {
-                        if (webVisible) {
+                        if (webVisible || root.isVoiceToText) {
                             console.log("No notes available, cannot delete folder");
                             return;
                         }
                         
                         messageDialogLoader.showDialog(VNoteMessageDialogHandler.DeleteFolder, ret => {
                             if (ret) {
-                                VNoteMainManager.vNoteDeleteFolder(folderListView.contextIndex);
-                                if (folderModel.count === 1)
-                                    folderEmpty();
-                                folderModel.remove(folderListView.contextIndex);
-                                if (folderListView.contextIndex === 0) {
-                                    folderListView.currentIndex = 0;
-                                }
+                                deleteFolderAtIndex(folderListView.contextIndex);
                             }
                         });
                     }
                 }
 
                 MenuItem {
-                    enabled: !isPlay && !isRecordingAudio 
+                    id: newNoteMenuItem
+                    enabled: !root.isPlay && !root.isRecordingAudio && !root.isVoiceToText
                     text: qsTr("New Note")
 
                     onTriggered: {
@@ -655,7 +832,8 @@ Item {
 
         onCurrentItemChanged: {
             var index = folderListView.currentIndex;
-            itemChanged(index, folderModel.get(index).name); // 发出 itemChanged 信号
+            if (index >= 0 && index < folderModel.count)
+                itemChanged(index, folderModel.get(index).name); // 发出 itemChanged 信号
         }
 
         MouseArea {

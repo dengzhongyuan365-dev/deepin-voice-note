@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024-2026 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
@@ -14,8 +17,10 @@ TitleBar {
     property bool isRecording: false
     property bool isRecordingAudio: false  
     property bool isSearching: false
+    property bool isVoiceToText: false
     property bool recorderBtnEnable: true
     property bool recordingHover: false
+    property bool recordBtnEnabled: recordBtn.enabled
 
     signal createNote
     signal insertImage
@@ -23,8 +28,9 @@ TitleBar {
     signal titleOpenSetting
 
     enableInWindowBlendBlur: false
-    height: 50
-    width: 0
+    separatorVisible: false
+
+    anchors.fill: parent
 
     background: Rectangle {
         color: DTK.themeType === ApplicationHelper.LightType ? "white" : "#242424"
@@ -51,9 +57,14 @@ TitleBar {
         anchors.left: titleBar.left
         anchors.leftMargin: 10
         anchors.verticalCenter: titleBar.verticalCenter
-        enabled: !isPlaying && !isSearching && !isRecordingAudio
+        enabled: !isPlaying && !isSearching && !isRecordingAudio && !isVoiceToText
         hoverEnabled: !isInitialInterface
+        visible: recordBtn.x > x + width
+        icon.height: 16
         icon.name: "new_note"
+        icon.width: 16
+        height: 30
+        width: 30
 
         onClicked: {
             createNote();
@@ -92,7 +103,11 @@ TitleBar {
         anchors.verticalCenter: titleBar.verticalCenter
         enabled: recorderBtnEnable && imageBtnEnable && !isPlaying && !isSearching
         hoverEnabled: !isInitialInterface
+        icon.height: 16
         icon.name: "record"
+        icon.width: 16
+        height: 30
+        width: 30
 
         onClicked: {
             startRecording();
@@ -111,7 +126,11 @@ TitleBar {
         anchors.verticalCenter: titleBar.verticalCenter
         enabled: imageBtnEnable
         hoverEnabled: !isInitialInterface
+        icon.height: 16
         icon.name: "img"
+        icon.width: 16
+        height: 30
+        width: 30
         x: titleBar.__includedAreaX - recordBtn.width - 10
 
         onClicked: {

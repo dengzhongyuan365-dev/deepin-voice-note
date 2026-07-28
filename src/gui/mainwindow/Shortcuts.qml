@@ -12,6 +12,8 @@ Item {
     property bool blockRecordingKey: false
     // 录音状态，用于禁用播放快捷键
     property bool isRecordingAudio: false
+    // 拖拽状态下禁用所有快捷键
+    property bool isDragging: false
 
     signal copy
     signal createFolder
@@ -30,7 +32,7 @@ Item {
 
         //帮助手册
         autoRepeat: false
-        enabled: true
+        enabled: !item.isDragging
         sequence: "F1"
 
         onActivated: {
@@ -40,7 +42,7 @@ Item {
 
     Shortcut {
         id: ctrl_Shift_H
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
 
         //快捷键界面
         sequence: "Ctrl+Shift+/"
@@ -52,7 +54,7 @@ Item {
 
     Shortcut {
         id: ctrl_S
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
 
         sequence: "Ctrl+S"
 
@@ -63,7 +65,7 @@ Item {
 
     Shortcut {
         id: ctrl_D
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
 
         sequence: "Ctrl+D"
 
@@ -77,7 +79,7 @@ Item {
 
         sequence: "Ctrl+N"
 
-        enabled: !item.blockCreateKeys
+        enabled: !item.isDragging && !item.blockCreateKeys
 
         onActivated: {
             createFolder();
@@ -86,7 +88,7 @@ Item {
 
     Shortcut {
         id: rename
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
 
         sequence: "F2"
 
@@ -97,7 +99,7 @@ Item {
 
     Shortcut {
         id: renameNoteShort
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
 
         sequence: "F3"
 
@@ -108,12 +110,22 @@ Item {
 
     Shortcut {
         id: ctrl_R
-        enabled: !item.initialOnlyCreateFolder && !item.blockRecordingKey
+        // 初始页面、录音中或显式要求屏蔽录音快捷键时，均不响应 Ctrl+R
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder && !rootWindow.isRecordingAudio && !item.blockRecordingKey
 
         sequence: "Ctrl+R"
 
         onActivated: {
-            startRecording();
+            console.warn("Ctrl+R activated - initialOnlyCreateFolder:", item.initialOnlyCreateFolder,
+                         "isRecordingAudio:", rootWindow.isRecordingAudio,
+                         "blockRecordingKey:", item.blockRecordingKey);
+
+            // 双重保护：只在未录音时启动录音，录音过程中不响应
+            if (!rootWindow.isRecordingAudio) {
+                startRecording();
+            } else {
+                console.warn("Ctrl+R ignored: recording is already in progress");
+            }
         }
     }
 
@@ -125,7 +137,7 @@ Item {
 
         sequence: "Ctrl+B"
 
-        enabled: !item.blockCreateKeys && !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.blockCreateKeys && !item.initialOnlyCreateFolder
 
         onActivated: {
             createNote();
@@ -137,7 +149,7 @@ Item {
 
         sequence: "Ctrl+A"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {}
     }
 
@@ -146,7 +158,7 @@ Item {
 
         sequence: "Ctrl+C"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {
             copy();
         }
@@ -157,7 +169,7 @@ Item {
 
         sequence: "Ctrl+X"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {}
     }
 
@@ -166,7 +178,7 @@ Item {
 
         sequence: "Ctrl+V"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {}
     }
 
@@ -175,7 +187,7 @@ Item {
 
         sequence: "Alt+M"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {
             showJsContextMenu();
         }
@@ -186,7 +198,7 @@ Item {
 
         sequence: "Ctrl+Z"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {}
     }
 
@@ -195,7 +207,7 @@ Item {
 
         sequence: "Ctrl+Shift+Z"
 
-        enabled: !item.initialOnlyCreateFolder
+        enabled: !item.isDragging && !item.initialOnlyCreateFolder
         onActivated: {}
     }
 }

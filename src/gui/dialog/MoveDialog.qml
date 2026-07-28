@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2023-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -12,13 +12,15 @@ DialogWindow {
     id: dialog
 
     property alias folderModel: folderList.model
-    property int index: -1
+    property int index: 0
     property string name
 
     signal moveToFolder(int index)
 
     height: 365
     width: 370
+
+    onVisibleChanged: if (visible) folderList.currentIndex = 0
 
     header: DialogTitleBar {
         enableInWindowBlendBlur: true
@@ -39,33 +41,30 @@ DialogWindow {
         ListView {
             id: folderList
 
+            activeFocusOnTab: true
             clip: true
             height: 226
+            keyNavigationEnabled: true
             width: 348
+
+            // currentIndex 作为选中项的唯一来源，同步给 dialog.index，
+            // 使 Tab 可聚焦列表、上/下方向键可切换记事本
+            onCurrentIndexChanged: dialog.index = currentIndex
 
             ScrollBar.vertical: ScrollBar {
             }
-            delegate: ItemDelegate {
-                backgroundVisible: true
+            delegate: Rectangle {
+                id: folderItem
+
+                property bool isHovered: false
+
+                color: index === dialog.index
+                    ? palette.highlight
+                    : (isHovered ? (DTK.themeType === ApplicationHelper.LightType ? "#1A000000" : "#1AFFFFFF") : "transparent")
                 height: 30
-                spacing: 8
+                radius: 6
                 width: 336
 
-                // 条件设置normalBackgroundVisible属性，仅在支持的DTK版本中使用
-                Component.onCompleted: {
-                    if (DTK.majorVersion >= 6) {
-                        // 在DTK 6.x中可能支持此属性
-                        if (typeof normalBackgroundVisible !== "undefined") {
-                            normalBackgroundVisible = index % 2 === 0;
-                        }
-                    }
-                }
-
-                onClicked: {
-                    dialog.index = index;
-                }
-
-                // text: model.name
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 8
@@ -89,7 +88,6 @@ DialogWindow {
                         }
 
                         Rectangle {
-                            //矩形
                             id: _mask
 
                             antialiasing: true
@@ -97,7 +95,7 @@ DialogWindow {
                             height: 16
                             radius: 8
                             smooth: true
-                            visible: false  //不可见
+                            visible: false
                             width: 16
                         }
 
@@ -106,7 +104,7 @@ DialogWindow {
 
                             anchors.fill: _image
                             antialiasing: true
-                            maskSource: _mask    //用作遮罩的项目
+                            maskSource: _mask
                             source: _image
                             visible: true
                         }
@@ -117,10 +115,26 @@ DialogWindow {
 
                         Layout.alignment: Qt.AlignVCenter
                         Layout.fillWidth: true
+                        color: index === dialog.index ? palette.highlightedText : DTK.palette.windowText
                         font.pixelSize: 14
                         horizontalAlignment: Text.AlignLeft
                         text: model.name
                         verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+
+                    onClicked: {
+                        folderList.currentIndex = index;
+                    }
+                    onEntered: {
+                        folderItem.isHovered = true;
+                    }
+                    onExited: {
+                        folderItem.isHovered = false;
                     }
                 }
             }

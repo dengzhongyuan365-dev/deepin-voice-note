@@ -14,7 +14,7 @@ endif()
 # using for linglnog
 add_definitions(-DINSTALL_LIB_PATH="${CMAKE_INSTALL_LIBDIR}")
 
-list(APPEND RESOURCES ${CMAKE_PROJECT_NAME}.qrc deepin-voice-note-web.qrc)
+list(APPEND RESOURCES ${CMAKE_PROJECT_NAME}.qrc deepin-voice-note-web.qrc deepin-voice-note-tiptap.qrc)
 
 # 检测架构并选择对应的 Qt 版本
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "mips.*")
@@ -29,19 +29,26 @@ else()
 endif()
 
 find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBXML2 REQUIRED libxml-2.0)
 
 # 保证 src 目录下头文件全局可见
 include_directories(src)
 include_directories(./dbusservice)
 include_directories(./gui)
 include_directories(./common)
+include_directories(./importolddata/tiptapmigration)
+include_directories(./importolddata/dbmigration)
 include_directories(./db)
 include_directories(./handler)
 include_directories(./audio)
+include_directories(${LIBXML2_INCLUDE_DIRS})
 
 aux_source_directory(./ ALLSOURCE)
 aux_source_directory(./dbusservice ALLSOURCE)
+aux_source_directory(./dbus ALLSOURCE)
 aux_source_directory(./common ALLSOURCE)
+aux_source_directory(./importolddata/tiptapmigration ALLSOURCE)
+aux_source_directory(./importolddata/dbmigration ALLSOURCE)
 aux_source_directory(./db ALLSOURCE)
 aux_source_directory(./gui ALLSOURCE)
 aux_source_directory(./task ALLSOURCE)
@@ -94,6 +101,7 @@ endif()
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
 include_directories(${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(${BIN_NAME} PRIVATE ${GSTREAMER_LIBRARIES})
+target_link_libraries(${BIN_NAME} PRIVATE ${LIBXML2_LIBRARIES})
 
 # Add install rule
 install(TARGETS ${BIN_NAME} DESTINATION ${APP_BIN_INSTALL_DIR})

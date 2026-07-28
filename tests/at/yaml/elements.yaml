@@ -1,0 +1,22 @@
+elements:
+  新建记事本:
+    name: 新建记事本
+    role: button
+  记事本1:
+    name: 记事本1
+    role: label
+  重命名:
+    name: 重命名
+    role: menu item
+  删除:
+    name: 删除
+    role: menu item
+  新建笔记:
+    name: 新建笔记
+    role: menu item
+  确定:
+    name: 确定
+    role: button
+  取 消:
+    name: 取 消
+    role: button

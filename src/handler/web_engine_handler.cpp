@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2024 - 2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -14,6 +14,7 @@
 #include "setting.h"
 #include "globaldef.h"
 #include "common/utils.h"
+#include "common/VNoteMainManager.h"
 
 #include <QApplication>
 #include <QCursor>
@@ -24,10 +25,15 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QCollator>
+#include <QDir>
+#include <QDropEvent>
 #include <QFile>
+#include <QFileInfo>
 #include <QTimer>
 #include <QCursor>
 #include <QMimeData>
+#include <QUuid>
+#include <QUrl>
 // 条件编译：QWebEngineContextMenuRequest 只在 Qt6 中存在
 #ifndef USE_QT5
 #include <QWebEngineContextMenuRequest>
@@ -63,6 +69,43 @@ const QString DEEPIN_DAEMON_APPEARANCE_INTERFACE = isV20() ? APPEARANCE_INTERFAC
 
 
 DGUI_USE_NAMESPACE
+
+namespace {
+
+QString normalizePicturePath(const QString &path)
+{
+    QString localPath = path;
+    const QUrl url(path);
+    if (url.isLocalFile()) {
+        localPath = url.toLocalFile();
+    }
+
+    const QString normalized = QDir::cleanPath(QDir::fromNativeSeparators(localPath));
+    QString result;
+    const QDir appDataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    const QString appImageRoot = QDir::cleanPath(appDataDir.filePath(QStringLiteral("images")));
+    const QString appImageRootWithSep = appImageRoot + QStringLiteral("/");
+
+    if (normalized.startsWith(QStringLiteral("images/"))) {
+        result = QDir::cleanPath(appDataDir.filePath(normalized));
+    } else {
+        if (normalized.startsWith(appImageRootWithSep)) {
+            result = normalized;
+        } else {
+            const QString webImageRoot = QDir::fromNativeSeparators(QStringLiteral(WEB_PATH) + QStringLiteral("/images/"));
+            if (normalized.startsWith(webImageRoot)) {
+                result = QDir::cleanPath(QDir(appImageRoot).filePath(normalized.mid(webImageRoot.size())));
+            }
+        }
+    }
+
+    if (!result.startsWith(appImageRootWithSep)) {
+        return QString();
+    }
+    return result;
+}
+
+}
 
 /*!
  * \class WebEngineHandler
@@ -124,10 +167,72 @@ void WebEngineHandler::setTarget(QObject *targetWebEngine)
     qInfo() << "Setting target web engine";
     if (targetWebEngine != m_targetWebEngine) {
         qInfo() << "targetWebEngine is not equal to m_targetWebEngine";
+        if (m_targetWebEngine)
+            m_targetWebEngine->removeEventFilter(this);
         m_targetWebEngine = targetWebEngine;
+        if (m_targetWebEngine)
+            m_targetWebEngine->installEventFilter(this);
         Q_EMIT targetChanged();
     }
     qInfo() << "Target web engine setting finished";
+}
+
+bool WebEngineHandler::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == m_targetWebEngine) {
+        switch (event->type()) {
+        case QEvent::DragEnter: {
+            auto *dropEvent = static_cast<QDropEvent *>(event);
+            const QMimeData *mimeData = dropEvent->mimeData();
+            m_dragImageCheckUrls = mimeData && mimeData->hasUrls() ? mimeData->urls() : QList<QUrl>();
+            m_dragCanInsertImages = !m_dragImageCheckUrls.isEmpty() && VNoteMainManager::instance()->canInsertImages(m_dragImageCheckUrls);
+            if (!m_dragImageCheckUrls.isEmpty() && !m_dragCanInsertImages) {
+                dropEvent->setDropAction(Qt::IgnoreAction);
+                dropEvent->ignore();
+                return true;
+            }
+            break;
+        }
+        case QEvent::DragMove: {
+            auto *dropEvent = static_cast<QDropEvent *>(event);
+            const QMimeData *mimeData = dropEvent->mimeData();
+            if (mimeData && mimeData->hasUrls()) {
+                const QList<QUrl> urls = mimeData->urls();
+                if (urls != m_dragImageCheckUrls) {
+                    m_dragImageCheckUrls = urls;
+                    m_dragCanInsertImages = VNoteMainManager::instance()->canInsertImages(m_dragImageCheckUrls);
+                }
+                if (!m_dragCanInsertImages) {
+                    dropEvent->setDropAction(Qt::IgnoreAction);
+                    dropEvent->ignore();
+                    return true;
+                }
+            }
+            break;
+        }
+        case QEvent::Drop: {
+            auto *dropEvent = static_cast<QDropEvent *>(event);
+            const QMimeData *mimeData = dropEvent->mimeData();
+            const bool canInsertImages = mimeData && mimeData->hasUrls() && VNoteMainManager::instance()->canInsertImages(mimeData->urls());
+            m_dragImageCheckUrls.clear();
+            m_dragCanInsertImages = false;
+            if (mimeData && mimeData->hasUrls() && !canInsertImages) {
+                dropEvent->setDropAction(Qt::IgnoreAction);
+                dropEvent->ignore();
+                return true;
+            }
+            break;
+        }
+        case QEvent::DragLeave:
+            m_dragImageCheckUrls.clear();
+            m_dragCanInsertImages = false;
+            break;
+        default:
+            break;
+        }
+    }
+
+    return QObject::eventFilter(watched, event);
 }
 
 /**
@@ -307,6 +412,8 @@ void WebEngineHandler::onInsertVoiceItem(const QString &voicePath, quint64 voice
     data.ptrVoice->voicePath = Utils::makeVoiceRelative(voicePath);
     data.ptrVoice->createTime = QDateTime::currentDateTime();
     data.ptrVoice->voiceTitle = data.ptrVoice->createTime.toString("yyyyMMdd hh.mm.ss");
+    // 为新录音生成唯一标识（UUID）
+    data.ptrVoice->voiceId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     MetaDataParser parse;
     QVariant value;
@@ -379,12 +486,8 @@ void WebEngineHandler::onMenuClicked(ActionManager::ActionKind kind)
         case ActionManager::VoiceSelectAll:
         case ActionManager::PictureSelectAll:
         case ActionManager::TxtSelectAll:
-            // 模拟全选快捷键ctrl+A
-#ifdef USE_QT5
-            Q_EMIT triggerWebAction((int)QWebEnginePage::SelectAll);
-#else
-            Q_EMIT triggerWebAction(QWebEnginePage::SelectAll);
-#endif
+            // 调用 js 实现全选，支持 translateText 区域
+            Q_EMIT JsContent::instance()->callJsSelectAll();
             break;
         case ActionManager::VoiceCopy:
         case ActionManager::PictureCopy:
@@ -412,10 +515,12 @@ void WebEngineHandler::onMenuClicked(ActionManager::ActionKind kind)
             // 粘贴事件，从剪贴板获取数据
             onPaste(isVoicePaste());
             break;
-        case ActionManager::PictureView:
+        case ActionManager::PictureView: {
             // 查看图片
-            Q_EMIT viewPicture(menuJson.toString());
+            const QString normalizedPath = normalizePicturePath(menuJson.toString());
+            Q_EMIT viewPicture(normalizedPath);
             break;
+        }
         case ActionManager::PictureSaveAs:
             // 另存图片
             savePictureAs();
@@ -802,7 +907,14 @@ bool WebEngineHandler::saveMP3()
 void WebEngineHandler::savePictureAs()
 {
     qInfo() << "Saving picture as";
-    QString originalPath = menuJson.toString();  // 获取原图片路径
+    // web端图片src为相对/web路径，需先解析为磁盘真实路径，否则复制失败
+    QString originalPath = normalizePicturePath(menuJson.toString());
+    if (originalPath.isEmpty()) {
+        // 路径无法解析，提示保存失败，避免执行注定失败的复制
+        qWarning() << "Failed to normalize picture path:" << menuJson.toString();
+        Q_EMIT requestMessageDialog(VNoteMessageDialogHandler::SaveFailed);
+        return;
+    }
     saveAsFile(originalPath, QStandardPaths::writableLocation(QStandardPaths::PicturesLocation), "image");
     qInfo() << "Picture saving finished";
 }

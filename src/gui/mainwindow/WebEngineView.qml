@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2024-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -21,10 +21,96 @@ Item {
     property bool hasScroll: false
     property bool initialVisible: false
     property bool isRecording: false
-    property bool isRecordingAudio: false 
+    property bool isRecordingAudio: false
+    property bool isVoiceToText: false
     property bool noSearchResult: false
     property bool webVisible: true
     property alias titleBar: title
+
+    Timer {
+        id: txtMenuToolbarTimer
+        interval: 50
+        repeat: false
+        property int retryCount: 0
+        readonly property int maxRetries: 8
+        onTriggered: rootItem.passTxtMenuToToolbar(txtCtxMenu, retryCount)
+    }
+
+    // 累加可见子项 implicitHeight/height（来自 DTK 布局，不用硬编码行高）
+    function txtMenuItemsHeight(menu) {
+        var sum = 0;
+        for (var i = 0; i < menu.count; ++i) {
+            var item = menu.itemAt(i);
+            if (!item || item.visible === false) {
+                continue;
+            }
+            var itemH = item.height > 0 ? item.height : item.implicitHeight;
+            if (itemH > 0) {
+                sum += itemH;
+            }
+        }
+        return sum;
+    }
+
+    function txtMenuEffectiveHeight(menu) {
+        var height = menu.height;
+        var itemsH = txtMenuItemsHeight(menu);
+        height = Math.max(height, itemsH);
+        height = Math.max(height, menu.implicitHeight);
+        if (menu.contentItem) {
+            height = Math.max(height, menu.contentItem.height);
+            height = Math.max(height, menu.contentItem.implicitHeight);
+        }
+        return height;
+    }
+
+    // menu.height 常为占位值；与可见子项总高度偏差大则视为未就绪
+    function isTxtMenuHeightReady(menu) {
+        var height = menu.height;
+        if (height <= 0 || !menu.visible) {
+            return false;
+        }
+        var itemsH = txtMenuItemsHeight(menu);
+        if (itemsH > 0 && height < itemsH * 0.85) {
+            return false;
+        }
+        return true;
+    }
+
+    function toJsInt(value) {
+        var n = Math.round(Number(value));
+        return isFinite(n) ? n : 0;
+    }
+
+    function passTxtMenuToToolbar(menu, retryCount) {
+        if (!menu.visible || !webView) {
+            return;
+        }
+
+        var menuWidth = menu.width > 0 ? menu.width : menu.implicitWidth;
+        var menuHeight = txtMenuEffectiveHeight(menu);
+
+        if (!isTxtMenuHeightReady(menu) && retryCount < txtMenuToolbarTimer.maxRetries) {
+            txtMenuToolbarTimer.retryCount = retryCount + 1;
+            txtMenuToolbarTimer.start();
+            return;
+        }
+
+        var webViewPos = webView.mapToItem(null, 0, 0);
+        var safeX = toJsInt(menu.x - webViewPos.x);
+        var safeY = toJsInt(menu.y - webViewPos.y);
+        var safeW = toJsInt(menuWidth);
+        var safeH = toJsInt(menuHeight);
+
+        if (safeW <= 0 || safeH <= 0) {
+            return;
+        }
+
+        webView.runJavaScript(
+            "if(typeof setMenuPosition === 'function') setMenuPosition("
+            + safeX + ", " + safeY + ", "
+            + safeW + ", " + safeH + ");");
+    }
 
     signal deleteNote
     signal moveNote
@@ -35,6 +121,10 @@ Item {
 
     function copy() {
         webView.triggerWebAction(5);
+    }
+
+    function focusWebView() {
+        webView.forceActiveFocus();
     }
 
     function showJsContextMenu() {
@@ -180,6 +270,7 @@ Item {
             multipleChoicesLoader.visible = true;
             multipleChoicesLoader.item.visible = true;
             multipleChoicesLoader.item.selectSize = choices;
+            multipleChoicesLoader.item.setOperationEnabled(!rootItem.isVoiceToText, !rootItem.isVoiceToText);
         } else {
             multipleChoicesLoader.visible = false;
             webVisible = true;
@@ -200,16 +291,33 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        WindowTitleBar {
-            id: title
+        Item {
+            id: titleBarHost
 
             Layout.fillWidth: true
-            imageBtnEnable: webVisible
-            isInitialInterface: initialVisible
-            isRecordingAudio: rootItem.isRecordingAudio 
+            Layout.minimumHeight: 50
+            Layout.maximumHeight: 50
 
-            onTitleOpenSetting: {
-                rootItem.openSetting();
+            // 透明窗口下仅标题栏区域遮挡毛玻璃，沿用窗口 palette 底色（非 TitleBar 强制白底）
+            Rectangle {
+                anchors.fill: parent
+                color: Window.window ? Window.window.palette.window
+                                      : (DTK.themeType === ApplicationHelper.LightType ? "#FFFFFF" : "#242424")
+                z: -1
+            }
+
+            WindowTitleBar {
+                id: title
+
+                anchors.fill: parent
+                imageBtnEnable: webVisible
+                isInitialInterface: initialVisible
+                isRecordingAudio: rootItem.isRecordingAudio
+                isVoiceToText: rootItem.isVoiceToText
+
+                onTitleOpenSetting: {
+                    rootItem.openSetting();
+                }
             }
         }
 
@@ -237,7 +345,7 @@ Item {
 
             Layout.fillHeight: true
             Layout.fillWidth: true
-            color: "transparent"
+            color: DTK.themeType === ApplicationHelper.LightType ? "#FFFFFF" : "#242424"
 
             WebEngineView {
                 id: webView
@@ -293,10 +401,26 @@ Item {
                 DropArea {
                     anchors.fill: parent
 
+                    property bool currentDragCanDropImages: false
+
+                    onEntered: function(drag) {
+                        currentDragCanDropImages = drag.hasUrls && VNoteMainManager.canInsertImages(drag.urls);
+                        drag.accepted = currentDragCanDropImages;
+                    }
+                    onExited: {
+                        currentDragCanDropImages = false;
+                    }
+                    onPositionChanged: function(drag) {
+                        drag.accepted = currentDragCanDropImages;
+                    }
                     onDropped: function(drop) {
-                        if (drop.hasUrls) {
+                        if (currentDragCanDropImages) {
+                            drop.accepted = true;
                             VNoteMainManager.insertImages(drop.urls);
+                        } else {
+                            drop.accepted = false;
                         }
+                        currentDragCanDropImages = false;
                     }
                 }
 
@@ -350,7 +474,7 @@ Item {
                         rootItem.saveAudio();
                     }
                     onCreateNote: {
-                        if (!initialVisible) {
+                        if (!initialVisible && !rootItem.isVoiceToText) {
                             VNoteMainManager.createNote();
                         }
                     }
@@ -359,6 +483,38 @@ Item {
                 WebChannel {
                     id: noteWebChannel
 
+                }
+            }
+        }
+
+
+        // debug 门控的独立 Tiptap WebEngineView（不改动 Summernote webView.url）
+        Loader {
+            id: tiptapLoader
+
+            active: TiptapChannel.debugEnabled
+            anchors.fill: parent
+            visible: active
+
+            sourceComponent: Item {
+                anchors.fill: parent
+
+                WebEngineView {
+                    id: tiptapWebView
+
+                    anchors.fill: parent
+                    backgroundColor: DTK.themeType === ApplicationHelper.LightType ? "white" : "black"
+                    visible: true
+
+                    Component.onCompleted: {
+                        tiptapWebChannel.registerObject("tiptapChannel", TiptapChannel);
+                        tiptapWebView.webChannel = tiptapWebChannel;
+                        tiptapWebView.url = Qt.resolvedUrl(TiptapChannel.tiptapHtmlPath());
+                    }
+                }
+
+                WebChannel {
+                    id: tiptapWebChannel
                 }
             }
         }
@@ -494,28 +650,18 @@ Item {
             }
 
             onOpened: {
-                // 菜单已经打开并定位好，获取真实位置
+                txtMenuToolbarTimer.stop();
+                txtMenuToolbarTimer.retryCount = 0;
                 Qt.callLater(function() {
-                    var menuX = txtCtxMenu.x;
-                    var menuY = txtCtxMenu.y;
-                    var menuWidth = txtCtxMenu.width;
-                    var menuHeight = txtCtxMenu.height;
-                    
-                    console.log("QML菜单位置: x=" + menuX + ", y=" + menuY + ", w=" + menuWidth + ", h=" + menuHeight);
-                    
-                    // 传递给JavaScript
-                    if (webView && menuWidth > 0 && menuHeight > 0) {
-                        var webViewPos = webView.mapToItem(null, 0, 0);
-                        var relativeX = menuX - webViewPos.x;
-                        var relativeY = menuY - webViewPos.y;
-                        
-                        console.log("转换为webView相对位置: x=" + relativeX + ", y=" + relativeY);
-                        
-                        var jsCode = "if(typeof setMenuPosition === 'function') setMenuPosition(" + 
-                                     relativeX + ", " + relativeY + ", " + menuWidth + ", " + menuHeight + ");";
-                        webView.runJavaScript(jsCode);
-                    }
+                    rootItem.passTxtMenuToToolbar(txtCtxMenu, 0);
                 });
+            }
+
+            onClosed: {
+                txtMenuToolbarTimer.stop();
+                // 菜单关闭不隐藏工具栏，仅解除定位锁定（b80965d 原始行为）
+                webView.runJavaScript(
+                    "if(typeof restoreAirPopoverTooltipPlacement === 'function') restoreAirPopoverTooltipPlacement();");
             }
 
             Connections {
@@ -597,7 +743,7 @@ Item {
         target: title
 
         onCreateNote: {
-            if (!initialVisible) {
+            if (!initialVisible && !rootItem.isVoiceToText) {
                 VNoteMainManager.createNote();
             }
         }
@@ -616,9 +762,10 @@ Item {
     Connections {
         target: VNoteMainManager
 
-        onNeedUpdateNote: {
+        onNeedUpdateNote: function(noteId) {
+            var requestNoteId = noteId;
             webView.runJavaScript("getHtml()", function (result) {
-                VNoteMainManager.updateNoteWithResult(result);
+                VNoteMainManager.updateNoteWithResultForNote(requestNoteId, result);
             });
         }
         onScrollChange: isTop => {
@@ -681,6 +828,11 @@ Item {
         onSaveVoiceStateChanged: enabled => {
             if (multipleChoicesLoader.active && multipleChoicesLoader.item) {
                 multipleChoicesLoader.item.setSaveVoiceEnabled(enabled);
+            }
+        }
+        onVoiceToTextStateChanged: isConverting => {
+            if (multipleChoicesLoader.active && multipleChoicesLoader.item) {
+                multipleChoicesLoader.item.setOperationEnabled(!isConverting, !isConverting);
             }
         }
     }

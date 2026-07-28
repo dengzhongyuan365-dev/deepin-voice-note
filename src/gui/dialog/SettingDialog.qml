@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2024-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick 2.15
@@ -12,15 +12,34 @@ import org.deepin.dtk 1.0
 Settings.SettingsDialog {
     id: control
 
-    flags: Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint
+    flags: Qt.Window | Qt.WindowCloseButtonHint
+    modality: Qt.WindowModal
     height: 548
     width: 664
 
-    config: Config {
+    config: QtObject {
         id: settingConfig
 
-        property int audioSource: 0
+        property int audioSource: 1
     }
+
+    // Override the default footer to use our own "Restore Defaults" button
+    contentView.footer: Item {
+        width: parent.width
+        height: 60
+
+        Button {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            text: qsTr("Restore Defaults")
+
+            onClicked: {
+                // Default value is 1 (Microphone), sync with JSON setting "default": 1
+                source.value = 1
+            }
+        }
+    }
+
     groups: [
         Settings.SettingsGroup {
             key: "Basic"
@@ -28,7 +47,7 @@ Settings.SettingsDialog {
 
             children: [
                 Settings.SettingsGroup {
-                    key: audioSource
+                    key: "audioSource"
                     name: qsTr("Audio Source")
 
                     background: Settings.ContentBackground {
@@ -37,6 +56,7 @@ Settings.SettingsDialog {
 
                     Settings.SettingsOption {
                         id: source
+                        key: "audioSource"
 
                         Component.onCompleted: {
                             value = VNoteMainManager.loadAudioSource();

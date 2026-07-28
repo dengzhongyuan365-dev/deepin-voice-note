@@ -1,5 +1,4 @@
-// Copyright (C) 2019 ~ 2019 UnionTech Software Technology Co.,Ltd.
-// SPDX-FileCopyrightText: 2023 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2019-2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -58,6 +57,14 @@ signals:
      * @param flag 转写标志 参数说明依据AsrFlag枚举
      */
     void callJsSetVoiceText(const QString &text, int asrflag);
+
+    /**
+     * @brief 调用web前端，通过 voicePath 设置语音转文字结果
+     * @param voicePath 语音文件路径（用于定位语音元素）
+     * @param text 文本
+     * @param asrflag 转写标志
+     */
+    void callJsSetVoiceTextByPath(const QString &voicePath, const QString &text, int asrflag);
     void callJsInsertImages(const QStringList &images); //调用web前端，插入图片
     void callJsSetPlayStatus(int status); //调用web前端, 设置播放状态，0播放中，1暂停中 2.结束播放
     /**
@@ -73,9 +80,11 @@ signals:
     void calllJsShowEditToolbar(int x, int y); //显示编辑工具栏
     void callJsHideEditToolbar(); //隐藏编辑工具栏
     void callJsSetVoicePlayBtnEnable(bool enable); //设置播放按钮是否可用
+    void callJsFocusEditor(); //聚焦富文本编辑器
 
     void callJsVoicePlayProgressChanged(int progressMs);    // 通知前端播放进度变更
     void callJsDeleteSelection();                           // 通知前端删除当前选中内容
+    void callJsSelectAll();                                  // 通知前端执行全选操作
 
     void textPaste(bool isVoicePaste); //粘贴信号
     void textChange();
