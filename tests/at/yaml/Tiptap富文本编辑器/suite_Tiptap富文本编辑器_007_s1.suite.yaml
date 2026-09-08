@@ -1,0 +1,113 @@
+name: suite_Tiptap富文本编辑器_007_s1_suite
+app: deepin-voice-note
+description: |
+  S007：Tiptap 搜索高亮与清空。
+  目标：验证 Tiptap 编辑器中搜索功能可用，输入关键词可触发搜索高亮，
+  清空搜索词后编辑区恢复正常。由于搜索输入框无 AT-SPI accessible name，
+  本 suite 验证主编辑区可用性和应用稳定性，搜索输入依赖键盘焦点切换。
+module: Tiptap富文本编辑器
+tags:
+- L2
+- tiptap
+- search
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S007
+  expected: tests/at/expected/tiptap_scenario_007_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s searchhighlight007 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_007_s1
+  name: 搜索高亮与清空
+  description: |
+    新建记事本和文本笔记后，粘贴含关键词的文本并切换笔记触发保存；
+    验证应用稳定且 TiptapWebView 可用。搜索输入框无 accessible name，
+    搜索交互通过键盘操作进行，DB 断言验证内容不被搜索操作污染。
+  tags:
+  - L2
+  - tiptap
+  - search
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+      role: panel
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

@@ -1,0 +1,78 @@
+name: suite_Tiptap富文本编辑器_010_002_s1_suite
+app: deepin-voice-note
+description: |
+  S010-002：Tiptap 主题、字体、启动同步 - 设置字体入口可用。
+  目标：验证通过标题栏菜单可打开设置入口，设置弹窗可访问，应用不崩溃。
+  由于设置弹窗元素和字体下拉框稳定性较弱，受系统环境影响，
+  本场景标记为 L3，仅验证菜单入口可访问和应用稳定性。
+module: Tiptap富文本编辑器
+tags:
+- L3
+- tiptap
+- font
+- settings
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S010-002
+  expected: tests/at/expected/tiptap_scenario_010_002_expected.yaml
+  source_cases:
+  - id: '1676205'
+    title: 设置字体统一
+    relation: partial
+  - id: '1676207'
+    title: 编辑区无字体-设置字体
+    relation: partial
+  - id: '1676209'
+    title: 编辑区有字体-设置字体
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_010_002_s1
+  name: 设置字体入口可用
+  description: |
+    启动应用后通过标题栏菜单打开设置入口，验证应用不崩溃且 TiptapWebView 仍可用。
+    设置弹窗中字体下拉框的完整交互受系统环境影响，不在本 suite 自动化范围内。
+    弹窗通过 Escape 关闭，验证应用恢复稳定。
+  tags:
+  - L3
+  - tiptap
+  - font
+  - settings
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: dtk_main_menu
+    items:
+    - 设置
+    wait: 1.0
+  - action: keyboard_press
+    key: escape
+    wait: 0.5
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
