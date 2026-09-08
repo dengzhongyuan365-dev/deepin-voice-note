@@ -11,7 +11,7 @@ expected_notes:
   - title: 未命名文本2
     format: tiptap
     schemaVersion: 1
-    content_contains: tiptapscenario001
+    content_contains: tiptapscenario002
   - title: 未命名文本3
     format: tiptap
     schemaVersion: 1

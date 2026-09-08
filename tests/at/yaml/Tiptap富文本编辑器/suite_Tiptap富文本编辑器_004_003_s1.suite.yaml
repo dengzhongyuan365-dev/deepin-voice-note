@@ -33,7 +33,7 @@ suites:
 - id: suite_Tiptap富文本编辑器_004_003_s1
   name: 图片插入撤销后重做恢复
   description: |
-    新建文本笔记后粘贴 PNG 图片；通过点击 TiptapWebView 中心选中铺满编辑区宽度的测试图片后按 Delete 删除图片，Ctrl+Z 恢复，再 Ctrl+Shift+Z 重做删除；随后切换笔记保存，最终 DB 中不应再存在 image node，且应用数据目录中应有图片落盘痕迹以证明图片曾经插入。
+    新建文本笔记后粘贴 PNG 图片；执行 Ctrl+Z 撤销图片插入，再通过当前运行时稳定的 Ctrl+Y 重做恢复图片；随后切换笔记保存，最终 DB 中应存在 image node，且图片 relPath 与落盘文件有效。
   tags:
   - L1
   - smoke

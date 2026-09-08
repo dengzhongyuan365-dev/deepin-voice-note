@@ -14,6 +14,8 @@ fast_fail: false
 env_check: []
 trace:
   feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S002
+  expected: tests/at/expected/tiptap_scenario_002_expected.yaml
   source_cases:
   - id: '1634839'
     title: 首次使用语音记事本应用，新建记事本
@@ -35,7 +37,7 @@ trace:
     relation: equivalent
 setup:
 - action: session_start
-  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s tiptapscenario001 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s tiptapscenario002 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
   wait: 6.0
 teardown:
 - action: session_stop
