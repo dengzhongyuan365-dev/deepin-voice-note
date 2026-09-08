@@ -1,0 +1,121 @@
+name: 文本笔记详情页_suite
+app: deepin-voice-note
+module: 文本笔记详情页
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_文本笔记详情页_001_s1
+  name: 新建文本笔记并验证详情页
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteContentWebView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: WebViewTitleBar
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+- id: suite_文本笔记详情页_002_s1
+  name: 详情页文本输入验证
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+  - step_type: action
+    action: keyboard_type
+    text: 测试文本内容
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteContentWebView
+- id: suite_文本笔记详情页_003_s1
+  name: 笔记列表和详情页验证
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteListScrollBar
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: ItemListMessageDialog
+- id: suite_文本笔记详情页_004_s1
+  name: 详情页右键菜单验证
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: right_click
+  - step_type: action
+    action: dtk_context_menu
+    items:
+    - 复制
+    - 剪切
+    - 粘贴
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteContentWebView
+teardown:
+- action: session_stop

@@ -1,0 +1,33 @@
+name: 1040_键盘交互_suite
+app: deepin-voice-note
+module: 1040_键盘交互
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_1040_键盘交互_001_s1
+  name: 快捷键重命名笔记
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: keyboard_press
+    key: F2
+  - step_type: action
+    action: keyboard_type
+    text: 重命名笔记
+  - step_type: action
+    action: keyboard_press
+    key: Return
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+teardown:
+- action: session_stop

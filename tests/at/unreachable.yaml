@@ -1,0 +1,13 @@
+unreachable:
+  - name: model.name
+    reason: |
+      动态绑定名称（model.name），cover.py _is_noise 过滤含 "." 的名称，
+      无法作为持久 selector.name 引用。该元素为 ItemListView 中
+      Rectangle 的 Accessible.name 绑定，运行时名称取决于模型数据，
+      无法静态定位。
+  - name: ActionManager.actionTextmenuItem.menuId
+    reason: |
+      动态拼接名称（ActionManager.actionTextmenuItem.menuId），
+      cover.py _is_noise 过滤含 "." 的名称，无法作为持久 selector.name 引用。
+      该元素为 VNoteRightMenu.qml 中 MenuItem 的 Accessible.name，
+      名称由 ActionManager 动态生成 menuId，无法静态定位。

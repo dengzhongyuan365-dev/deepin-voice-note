@@ -1,0 +1,45 @@
+name: 1040_记事本移动_suite
+app: deepin-voice-note
+module: 1040_记事本移动
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_1040_记事本移动_001_s1
+  name: 移动笔记对话框验证
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: keyboard_hot_key
+    key: ctrl+a
+  - step_type: action
+    action: element_action
+    selector:
+      name: MoveButton
+    do: click
+  - step_type: action
+    action: element_action
+    selector:
+      name: CancelButton
+    do: click
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderList
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListScrollBar
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: MultipleChoicesView
+teardown:
+- action: session_stop

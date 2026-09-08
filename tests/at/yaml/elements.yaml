@@ -1,22 +1,93 @@
 elements:
-  新建记事本:
+  NewNoteButton:
+    name: NewNoteButton
+  MoveButton:
+    name: MoveButton
+  FolderList:
+    name: FolderList
+  FolderListScrollBar:
+    name: FolderListScrollBar
+  CancelButton:
+    name: CancelButton
+  MultipleChoicesView:
+    name: MultipleChoicesView
+  NoteItemListView:
+    name: NoteItemListView
+  TiptapWebView:
+    name: TiptapWebView
+  NoteContentWebView:
+    name: NoteContentWebView
+  VoiceNoteMainWindow:
+    name: VoiceNoteMainWindow
+  InitialInterface:
+    name: InitialInterface
+  CreateFolderButton:
     name: CreateFolderButton
-    role: button
-  记事本1:
-    name: 记事本1
-    role: label
-  重命名:
-    name: 重命名
-    role: menu item
-  删除:
-    name: 删除
-    role: menu item
-  新建笔记:
-    name: 新建笔记
-    role: menu item
-  确定:
-    name: 确定
-    role: button
-  取 消:
-    name: 取 消
-    role: button
+  MainWindow_UpgradeView:
+    name: MainWindow_UpgradeView
+  MessageDialogLoader:
+    name: MessageDialogLoader
+  TitleBarMenu:
+    name: TitleBarMenu
+  ExitMenuItem:
+    name: ExitMenuItem
+  MainShortcuts:
+    name: MainShortcuts
+  WebViewTitleBar:
+    name: WebViewTitleBar
+  NoteListScrollBar:
+    name: NoteListScrollBar
+  ItemListMessageDialog:
+    name: ItemListMessageDialog
+  SettingsMenuItem:
+    name: SettingsMenuItem
+  PrivacyPolicyMenuItem:
+    name: PrivacyPolicyMenuItem
+  FolderListView:
+    name: FolderListView
+  model.name:
+    name: model.name
+  FolderItemContextMenu:
+    name: FolderItemContextMenu
+  RenameMenuItem:
+    name: RenameMenuItem
+  DeleteFolderMenuItem:
+    name: DeleteFolderMenuItem
+  NewNoteFromFolderMenuItem:
+    name: NewNoteFromFolderMenuItem
+  FolderMessageDialogLoader:
+    name: FolderMessageDialogLoader
+  VNoteButton:
+    name: VNoteButton
+  DeleteButton:
+    name: DeleteButton
+  RecordingBar:
+    name: RecordingBar
+  PauseButton:
+    name: PauseButton
+  StopButton:
+    name: StopButton
+  WebViewMessageDialog:
+    name: WebViewMessageDialog
+  ActionManager.actionTextmenuItem.menuId:
+    name: ActionManager.actionTextmenuItem.menuId
+  TwoColumnModeButton:
+    name: TwoColumnModeButton
+  ToolBarMoreButton:
+    name: ToolBarMoreButton
+  SidebarBlurBackground:
+    name: SidebarBlurBackground
+  RestoreDefaultsButton:
+    name: RestoreDefaultsButton
+  InternalRadioButton:
+    name: InternalRadioButton
+  MicrophoneRadioButton:
+    name: MicrophoneRadioButton
+  SaveNoteButton:
+    name: SaveNoteButton
+  SaveVoiceButton:
+    name: SaveVoiceButton
+  MainMessageDialog:
+    name: MainMessageDialog
+  VNoteToolButtonBackground:
+    name: VNoteToolButtonBackground

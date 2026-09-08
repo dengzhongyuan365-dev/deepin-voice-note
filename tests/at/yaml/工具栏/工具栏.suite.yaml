@@ -1,0 +1,31 @@
+name: 工具栏_suite
+app: deepin-voice-note
+module: 工具栏
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_工具栏_001_s1
+  name: 关闭主界面
+  description: ''
+  steps:
+  - step_type: action
+    action: dtk_main_menu
+    items:
+    - 退出
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TitleBarMenu
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: ExitMenuItem
+teardown:
+- action: session_stop

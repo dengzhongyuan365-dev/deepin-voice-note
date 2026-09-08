@@ -1,0 +1,66 @@
+name: 记事本条目_suite
+app: deepin-voice-note
+module: 记事本条目
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_记事本条目_001_s1
+  name: 新建记事本
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: CreateFolderButton
+    do: click
+  - step_type: action
+    action: keyboard_type
+    text: 新记事本
+  - step_type: action
+    action: keyboard_press
+    key: Return
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: model.name
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListScrollBar
+- id: suite_记事本条目_002_s1
+  name: 重命名记事本正向流程
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: FolderListView
+    do: right_click
+  - step_type: action
+    action: dtk_context_menu
+    items:
+    - 重命名
+  - step_type: action
+    action: keyboard_type
+    text: 重命名记事本
+  - step_type: action
+    action: keyboard_press
+    key: Return
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: model.name
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+teardown:
+- action: session_stop

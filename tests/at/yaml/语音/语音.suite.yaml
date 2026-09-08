@@ -1,0 +1,40 @@
+name: 语音_suite
+app: deepin-voice-note
+module: 语音
+setup:
+- action: session_start
+  command: deepin-voice-note
+  wait: 3.0
+suites:
+- id: suite_语音_001_s1
+  name: 删除语音笔记
+  description: ''
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+  - step_type: action
+    action: keyboard_hot_key
+    key: ctrl+a
+  - step_type: action
+    action: element_action
+    selector:
+      name: DeleteButton
+    do: click
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: MultipleChoicesView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: DeleteButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+teardown:
+- action: session_stop
