@@ -1,0 +1,61 @@
+name: suite_Tiptap富文本编辑器_010_003_s1_suite
+app: deepin-voice-note
+description: |
+  S010-003：Tiptap 主题、字体、启动同步 - 字体配置持久化。
+  目标：验证字体设置可持久化保存，重启后字体配置保持。
+  由于字体配置落点未确认，无法通过 DB 或配置文件断言持久化，
+  本场景标记为 L3/unsupported，仅验证应用启动稳定性和 TiptapWebView 可用性。
+module: Tiptap富文本编辑器
+tags:
+- L3
+- tiptap
+- font
+- persistence
+- unsupported
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S010-003
+  expected: tests/at/expected/tiptap_scenario_010_003_expected.yaml
+  source_cases:
+  - id: '1635305'
+    title: 切换字体大小查看语音记事本各个界面显示
+    relation: manual
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_010_003_s1
+  name: 字体配置持久化
+  description: |
+    字体配置持久化验证需要确认配置文件落点，无法在基础流水线中通过 DB 断言。
+    本 suite 仅验证应用启动后 TiptapWebView 可用，
+    完整的字体配置持久化验证需要确认配置文件路径后实现。
+  tags:
+  - L3
+  - tiptap
+  - font
+  - persistence
+  - unsupported
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView

@@ -1,0 +1,13 @@
+scenario: tiptap_scenario_009_003
+name: 语音块删除撤销重做
+app: deepin-voice-note
+status: unsupported
+reason: 语音块 fixture 不可用，删除/撤销/重做操作依赖已存在的语音块
+expected_folder:
+  title: 记事本2
+  min_note_count: 1
+expected_notes: []
+checks:
+  - 需要预置语音块 fixture 后实现
+  - 验证删除后 voice node 消失
+  - 验证撤销后 voice node 恢复

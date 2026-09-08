@@ -1,0 +1,119 @@
+name: suite_Tiptap富文本编辑器_005_003_s1_suite
+app: deepin-voice-note
+description: |
+  S005-003：旧 Summernote 数据迁移到 Tiptap - 迁移后重启持久化。
+  目标：验证旧笔记迁移到 Tiptap 并编辑后，切换笔记触发保存，
+  DB 中目标笔记已转换为 Tiptap JSON envelope，旧内容与新内容均持久化保存。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- migration
+- persistence
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S005-003
+  expected: tests/at/expected/tiptap_scenario_005_003_expected.yaml
+  source_cases:
+  - id: '1634905'
+    title: 重启应用查看笔记列表默认选中第一条
+    relation: partial
+  - id: '1634907'
+    title: 切换笔记，详情页同步切换
+    relation: equivalent
+  - id: '1634959'
+    title: 点击文本笔记详情页的文本区域编辑文字内容
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s migrationpersist003 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_legacy_migration_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_005_003_s1
+  name: 迁移后重启持久化
+  description: |
+    使用旧 Summernote fixture 启动应用后，打开迁移后的旧笔记，粘贴追加文本；
+    新建笔记触发切换保存，再切回原笔记验证内容完整，由 DB 断言验证
+    目标记笔已转换为 Tiptap JSON envelope 且内容持久化。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - migration
+  - persistence
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: assert_element
+    selector:
+      name: 记事本1
+      role: label
+  - action: element_action
+    selector:
+      name: 记事本1
+      role: label
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 文本
+      role: label
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本1
+      role: label
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 文本
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本1
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

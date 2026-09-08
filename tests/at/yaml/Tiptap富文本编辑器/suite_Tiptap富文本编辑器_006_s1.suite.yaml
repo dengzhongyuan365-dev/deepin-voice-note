@@ -1,0 +1,124 @@
+name: suite_Tiptap富文本编辑器_006_s1_suite
+app: deepin-voice-note
+description: |
+  S006：Tiptap 富文本格式工具栏。
+  目标：验证 Summernote 富文本格式能力迁移到 Tiptap 后，常用格式入口可用，
+  格式结果能进入 Tiptap JSON。覆盖加粗、斜体、下划线快捷键和内容持久化。
+module: Tiptap富文本编辑器
+tags:
+- L2
+- tiptap
+- format
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S006
+  expected: tests/at/expected/tiptap_scenario_006_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s richtextformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_006_s1
+  name: 富文本格式工具栏加粗斜体下划线
+  description: |
+    新建记事本和文本笔记后，粘贴测试文本，执行 Ctrl+A 全选，
+    依次执行 Ctrl+B 加粗、Ctrl+I 斜体、Ctrl+U 下划线，
+    切换笔记触发保存，由 DB 断言验证 Tiptap JSON 包含对应 marks。
+  tags:
+  - L2
+  - tiptap
+  - format
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+      role: panel
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+b
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+i
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+u
+    wait: 0.3
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

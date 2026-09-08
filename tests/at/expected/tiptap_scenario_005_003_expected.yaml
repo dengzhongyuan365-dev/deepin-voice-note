@@ -1,0 +1,23 @@
+scenario: tiptap_scenario_005_003
+name: 迁移后重启持久化
+app: deepin-voice-note
+expected_folder:
+  title: 记事本1
+  min_note_count: 2
+expected_notes:
+  - title: 文本
+    format: tiptap
+    schemaVersion: 1
+    content_contains:
+      - migrationlegacy001
+      - migrationpersist003
+  - title: 未命名文本1
+    format: tiptap
+    schemaVersion: 1
+checks:
+  - 目标记事本存在
+  - 旧笔记迁移后仍存在
+  - 旧笔记内容与新追加内容共存
+  - 新建笔记存在
+  - 旧笔记使用 Tiptap JSON envelope
+  - 重启后内容持久化

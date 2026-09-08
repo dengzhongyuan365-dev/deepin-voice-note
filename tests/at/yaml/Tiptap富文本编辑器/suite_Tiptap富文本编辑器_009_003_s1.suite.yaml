@@ -1,0 +1,69 @@
+name: suite_Tiptap富文本编辑器_009_003_s1_suite
+app: deepin-voice-note
+description: |
+  S009-003：Tiptap 语音块基础链路 - 语音块删除撤销重做。
+  目标：验证语音块可通过撤销/重做操作删除和恢复，voice node 在 DB 中正确变更。
+  由于语音块删除/撤销/重做操作依赖已存在的语音块 fixture，
+  本场景标记为 L3/unsupported，仅验证应用启动稳定性和 RecordButton 可访问性。
+module: Tiptap富文本编辑器
+tags:
+- L3
+- tiptap
+- voice
+- undo-redo
+- unsupported
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S009-003
+  expected: tests/at/expected/tiptap_scenario_009_003_expected.yaml
+  source_cases:
+  - id: '1676211'
+    title: Ctrl+Z撤销和Ctrl+Shift+Z重做---保存/删除录音
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_009_003_s1
+  name: 语音块删除撤销重做
+  description: |
+    语音块删除/撤销/重做操作依赖已存在的语音块 fixture，无法在基础流水线中完整自动化。
+    本 suite 仅验证应用启动后 RecordButton 控件可访问、TiptapWebView 可用，
+    完整的删除/撤销/重做验证需要预置语音 fixture 后实现。
+  tags:
+  - L3
+  - tiptap
+  - voice
+  - undo-redo
+  - unsupported
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView

@@ -1,0 +1,72 @@
+name: suite_Tiptap富文本编辑器_009_002_s1_suite
+app: deepin-voice-note
+description: |
+  S009-002：Tiptap 语音块基础链路 - 播放/暂停控件可用。
+  目标：验证语音块的播放/暂停控件可访问，应用不崩溃。
+  由于播放/暂停控件仅在存在语音块时出现，依赖音频设备和语音 fixture，
+  本场景标记为 L3/unsupported，仅验证应用启动稳定性和 RecordButton 可访问性。
+module: Tiptap富文本编辑器
+tags:
+- L3
+- tiptap
+- voice
+- playback
+- unsupported
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S009-002
+  expected: tests/at/expected/tiptap_scenario_009_002_expected.yaml
+  source_cases:
+  - id: '1676291'
+    title: 播放/暂停播放录音
+    relation: partial
+  - id: '1676289'
+    title: 播放/暂停播放录音-通过 space 快捷键操作
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_009_002_s1
+  name: 播放暂停控件可用
+  description: |
+    播放/暂停控件仅在存在语音块时出现，依赖音频设备和预置语音 fixture。
+    本 suite 仅验证应用启动后 RecordButton 控件可访问、TiptapWebView 可用，
+    完整的播放/暂停控件验证需要预置语音 fixture 后实现。
+  tags:
+  - L3
+  - tiptap
+  - voice
+  - playback
+  - unsupported
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView

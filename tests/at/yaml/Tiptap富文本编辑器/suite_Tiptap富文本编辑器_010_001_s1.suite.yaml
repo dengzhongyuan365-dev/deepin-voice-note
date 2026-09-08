@@ -1,0 +1,119 @@
+name: suite_Tiptap富文本编辑器_010_001_s1_suite
+app: deepin-voice-note
+description: |
+  S010-001：Tiptap 主题、字体、启动同步 - 启动后主题同步不影响编辑。
+  目标：验证 Tiptap QWebChannel 初始化前后的主题信息同步不影响编辑器功能，
+  启动后 TiptapWebView 可用，编辑区可输入文本，切换笔记后 DB 中内容保存成功。
+  不做像素级颜色判断，仅验证可输入和数据不丢失。
+module: Tiptap富文本编辑器
+tags:
+- L2
+- tiptap
+- theme
+- sync
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S010-001
+  expected: tests/at/expected/tiptap_scenario_010_001_expected.yaml
+  source_cases:
+  - id: '1676457'
+    title: 主题
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s themesynctedit010 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_010_001_s1
+  name: 启动后主题同步不影响编辑
+  description: |
+    清库启动应用后，新建记事本和文本笔记；在 Tiptap 编辑区粘贴测试文本，
+    切换笔记触发保存，再切回原笔记验证内容完整。不做颜色/视觉判断，
+    由 DB 断言验证内容持久化且格式为 Tiptap JSON envelope。
+  tags:
+  - L2
+  - tiptap
+  - theme
+  - sync
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+      role: panel
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

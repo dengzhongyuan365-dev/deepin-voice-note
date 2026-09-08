@@ -1,0 +1,13 @@
+scenario: tiptap_scenario_009_002
+name: 播放暂停控件可用
+app: deepin-voice-note
+status: unsupported
+reason: 播放/暂停控件仅在存在语音块时出现，依赖音频设备和语音 fixture
+expected_folder:
+  title: 记事本2
+  min_note_count: 1
+expected_notes: []
+checks:
+  - 需要预置语音块 fixture 后实现
+  - 验证播放控件可访问
+  - 验证应用不崩溃

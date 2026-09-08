@@ -1,0 +1,13 @@
+scenario: tiptap_scenario_009_001
+name: 预置语音块显示与持久化
+app: deepin-voice-note
+status: unsupported
+reason: 语音块 fixture 不可用，依赖预置语音数据；音频设备/录音环境无法在基础流水线中保证
+expected_folder:
+  title: 记事本2
+  min_note_count: 1
+expected_notes: []
+checks:
+  - 需要预置语音块 fixture 后实现
+  - 验证 voice node 在 Tiptap JSON 中存在
+  - 验证 audio 文件落盘

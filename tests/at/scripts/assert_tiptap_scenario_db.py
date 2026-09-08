@@ -73,6 +73,29 @@ def count_tiptap_nodes(node: Any, node_type: str) -> int:
     return sum(1 for _ in iter_tiptap_nodes(node, node_type))
 
 
+def collect_tiptap_marks(node: Any) -> set[str]:
+    """Collect all mark types from text nodes in a Tiptap/ProseMirror document."""
+    marks: set[str] = set()
+    if isinstance(node, dict):
+        if node.get("type") == "text":
+            for mark in node.get("marks") or []:
+                if isinstance(mark, dict) and "type" in mark:
+                    marks.add(str(mark["type"]))
+        content = node.get("content")
+        if isinstance(content, list):
+            for child in content:
+                marks |= collect_tiptap_marks(child)
+    elif isinstance(node, list):
+        for child in node:
+            marks |= collect_tiptap_marks(child)
+    return marks
+
+
+def has_tiptap_node_type(node: Any, node_type: str) -> bool:
+    """Check if a Tiptap/ProseMirror document contains a node of the given type."""
+    return count_tiptap_nodes(node, node_type) > 0
+
+
 def tiptap_image_relpaths(meta: dict[str, Any]) -> list[str]:
     """Return saved relative paths for image nodes in a Tiptap document."""
     relpaths: list[str] = []
@@ -187,6 +210,37 @@ def assert_note_content(title: str, note_expect: dict[str, Any], meta: dict[str,
             )
         else:
             ok(f"{title}: paragraph count actual={paragraph_count}, expected>={expected_count}")
+
+    for expected_mark in as_list(note_expect.get("marks_contains")):
+        all_marks = collect_tiptap_marks(meta.get("content"))
+        if str(expected_mark) not in all_marks:
+            fail(errors, f"{title}: mark not found expected_mark={expected_mark!r}, actual_marks={all_marks!r}")
+        else:
+            ok(f"{title}: mark found: {expected_mark!r}")
+
+    for expected_node_type in as_list(note_expect.get("node_type_contains")):
+        if not has_tiptap_node_type(meta.get("content"), str(expected_node_type)):
+            fail(errors, f"{title}: node type not found expected_type={expected_node_type!r}")
+        else:
+            ok(f"{title}: node type found: {expected_node_type!r}")
+
+    voice_count_expect = note_expect.get("voice_count")
+    if voice_count_expect is not None:
+        voice_count = count_tiptap_nodes(meta.get("content"), "voice")
+        expected_count = int(voice_count_expect)
+        if voice_count != expected_count:
+            fail(errors, f"{title}: voice count mismatch actual={voice_count}, expected={expected_count}")
+        else:
+            ok(f"{title}: voice count={voice_count}")
+
+    audio_count_expect = note_expect.get("audio_count")
+    if audio_count_expect is not None:
+        audio_count = count_tiptap_nodes(meta.get("content"), "audio")
+        expected_count = int(audio_count_expect)
+        if audio_count != expected_count:
+            fail(errors, f"{title}: audio count mismatch actual={audio_count}, expected={expected_count}")
+        else:
+            ok(f"{title}: audio count={audio_count}")
 
     image_count_expect = note_expect.get("image_count")
     image_relpaths = tiptap_image_relpaths(meta)

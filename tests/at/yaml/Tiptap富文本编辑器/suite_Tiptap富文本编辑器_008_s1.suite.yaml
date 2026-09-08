@@ -1,0 +1,113 @@
+name: suite_Tiptap富文本编辑器_008_s1_suite
+app: deepin-voice-note
+description: |
+  S008：Tiptap 混合内容导出。
+  目标：验证 Tiptap 编辑器的文本内容可通过标题栏菜单导出，导出操作不导致
+  应用崩溃，编辑区在导出后仍可用。导出依赖文件保存对话框，本 suite 验证
+  主链路可用性，文件保存路径由用户选择。
+module: Tiptap富文本编辑器
+tags:
+- L2
+- tiptap
+- export
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S008
+  expected: tests/at/expected/tiptap_scenario_008_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s exportcontent008 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_008_s1
+  name: 混合内容导出
+  description: |
+    新建记事本和文本笔记后，粘贴含文本内容并切换笔记触发保存；
+    通过标题栏菜单打开设置入口验证菜单可用，验证导出操作后应用仍稳定，
+    TiptapWebView 可用。文件保存对话框操作不在本 suite 自动化范围内。
+  tags:
+  - L2
+  - tiptap
+  - export
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+      role: panel
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

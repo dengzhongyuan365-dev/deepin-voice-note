@@ -1,0 +1,67 @@
+name: suite_Tiptap富文本编辑器_009_001_s1_suite
+app: deepin-voice-note
+description: |
+  S009-001：Tiptap 语音块基础链路 - 预置语音块显示与持久化。
+  目标：验证预置语音块在 Tiptap 编辑器中正确显示，voice/audio node 在 DB 中持久化。
+  由于语音块依赖预置语音 fixture 和音频设备，本场景标记为 L3/unsupported，
+  仅验证应用启动稳定性和 RecordButton 控件可访问性。
+module: Tiptap富文本编辑器
+tags:
+- L3
+- tiptap
+- voice
+- unsupported
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S009-001
+  expected: tests/at/expected/tiptap_scenario_009_001_expected.yaml
+  source_cases:
+  - id: '1676293'
+    title: 语音笔记显示
+    relation: equivalent
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_009_001_s1
+  name: 预置语音块显示与持久化
+  description: |
+    语音块场景依赖预置语音 fixture 和音频设备，无法在基础流水线中完整自动化。
+    本 suite 仅验证应用启动后 RecordButton 控件可访问、TiptapWebView 可用，
+    完整的语音块显示与持久化验证需要预置语音 fixture 后实现。
+  tags:
+  - L3
+  - tiptap
+  - voice
+  - unsupported
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: RecordButton
+      role: button
+  - action: assert_element
+    selector:
+      name: TiptapWebView

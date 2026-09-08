@@ -1,0 +1,23 @@
+scenario: tiptap_scenario_006
+name: 富文本格式工具栏加粗斜体下划线
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    marks_contains:
+      - bold
+      - italic
+      - underline
+    content_contains: richtextformat006
+  - title: 未命名文本3
+    format: tiptap
+    schemaVersion: 1
+checks:
+  - 目标记事本存在
+  - 目标笔记内容保存到 meta_data
+  - 目标笔记 Tiptap JSON 包含 bold/italic/underline marks
+  - 目标笔记使用 Tiptap JSON envelope

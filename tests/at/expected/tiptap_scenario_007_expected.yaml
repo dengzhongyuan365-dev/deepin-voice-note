@@ -1,0 +1,19 @@
+scenario: tiptap_scenario_007
+name: 搜索高亮与清空
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    content_contains: searchhighlight007
+  - title: 未命名文本3
+    format: tiptap
+    schemaVersion: 1
+checks:
+  - 目标记事本存在
+  - 目标笔记内容保存到 meta_data
+  - 搜索操作不污染笔记内容
+  - 目标笔记使用 Tiptap JSON envelope

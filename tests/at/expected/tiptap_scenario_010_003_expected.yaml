@@ -1,0 +1,12 @@
+scenario: tiptap_scenario_010_003
+name: 字体配置持久化
+app: deepin-voice-note
+status: unsupported
+reason: 字体配置落点未确认，无法通过 DB 或配置文件断言持久化
+expected_folder:
+  title: 记事本1
+  min_note_count: 1
+expected_notes: []
+checks:
+  - 需确认字体配置文件路径后实现
+  - 验证重启后字体设置保持
