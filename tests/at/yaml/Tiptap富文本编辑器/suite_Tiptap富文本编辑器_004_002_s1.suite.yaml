@@ -1,0 +1,122 @@
+name: suite_Tiptap富文本编辑器_004_002_s1_suite
+app: deepin-voice-note
+description: |
+  S004-002：Tiptap 图片插入后撤销删除。
+  目标：验证图片作为 Tiptap image node 插入后，可通过 Ctrl+Z 撤销插入，撤销后的空文档可持久化保存。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- image
+- undo
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S004-002
+  expected: tests/at/expected/tiptap_scenario_004_002_expected.yaml
+  source_cases:
+  - id: '1676213'
+    title: Ctrl+Z撤销和Ctrl+Shift+Z重做功能验证---导入/删除图片
+    relation: equivalent
+  - id: '1676227'
+    title: 详情页右键菜单操作---删除图片
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'pkill -x xclip 2>/dev/null || true; command -v xclip >/dev/null || { echo xclip is required for clipboard image paste >&2; exit 127; }; xclip -selection clipboard -target image/png -i ./tests/at/fixtures/tiptap_s004_image.png -loops 20 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_004_002_s1
+  name: 图片插入后撤销删除
+  description: |
+    新建文本笔记并粘贴 PNG 图片，随后执行 Ctrl+Z 撤销图片插入；切换笔记保存后由 DB 模板验证目标笔记不再包含 image node，同时图片文件存在落盘痕迹。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - image
+  - undo
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 3.0
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait: 0.8
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

@@ -1,0 +1,16 @@
+scenario: tiptap_scenario_003_003
+name: 删除退格撤销重做
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    content_equals: deleteundo00
+    content_not_equals: deleteundo001
+checks:
+  - 目标记事本存在
+  - Delete 删除与 Ctrl+Z/Ctrl+Shift+Z 可改变文本状态
+  - Backspace 删除与 Ctrl+Z/Ctrl+Shift+Z 后最终文本符合预期

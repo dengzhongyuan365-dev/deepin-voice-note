@@ -1,0 +1,17 @@
+scenario: tiptap_scenario_004_002
+name: 图片插入后撤销删除
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_assets:
+  min_image_file_count: 1
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    image_count: 0
+checks:
+  - 目标记事本存在
+  - 粘贴图片后图片文件已落盘
+  - Ctrl+Z 后目标笔记不再包含 image node

@@ -1,0 +1,18 @@
+scenario: tiptap_scenario_003_001
+name: 混合字符回车空格Tab输入
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    content_contains:
+      - tiptapKeyboard中文ABC123!@#
+      - line2 text spaceok
+    min_paragraph_count: 2
+checks:
+  - 目标记事本存在
+  - 目标笔记使用 Tiptap JSON envelope
+  - 混合字符与换行空格文本已保存

@@ -1,0 +1,18 @@
+scenario: tiptap_scenario_004_003
+name: 图片插入撤销后重做恢复
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    image_count: 1
+    image_relPath_prefix: images/
+    image_files_exist: true
+checks:
+  - 目标记事本存在
+  - Ctrl+Z 可撤销图片插入
+  - Ctrl+Y 可重做恢复图片插入
+  - 恢复后的 image node 与图片文件可持久化保存

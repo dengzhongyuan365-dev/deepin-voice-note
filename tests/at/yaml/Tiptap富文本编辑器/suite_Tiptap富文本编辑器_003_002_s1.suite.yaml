@@ -1,0 +1,117 @@
+name: suite_Tiptap富文本编辑器_003_002_s1_suite
+app: deepin-voice-note
+description: |
+  S003-002：Tiptap 基础文本编辑快捷键 - Ctrl+A、Ctrl+C、Ctrl+X、Ctrl+V。
+  目标：验证编辑器替换后，全选、复制、剪切、粘贴快捷键链路不退化。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- keyboard
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S003-002
+  expected: tests/at/expected/tiptap_scenario_003_002_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s copycutpaste001 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_003_002_s1
+  name: 全选复制剪切粘贴
+  description: |
+    新建文本笔记后粘贴基础文本，执行 Ctrl+A、Ctrl+C、Ctrl+X、Ctrl+V，最后切换笔记触发保存，DB 应保持原文本。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - keyboard
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+c
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+x
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

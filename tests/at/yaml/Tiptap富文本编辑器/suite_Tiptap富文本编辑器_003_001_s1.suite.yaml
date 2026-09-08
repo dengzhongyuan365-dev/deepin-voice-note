@@ -1,0 +1,108 @@
+name: suite_Tiptap富文本编辑器_003_001_s1_suite
+app: deepin-voice-note
+description: |
+  S003-001：Tiptap 基础文本编辑快捷键 - 混合字符、回车、空格、Tab 输入。
+  目标：验证 Summernote 切换到 Tiptap 后，编辑器可接收中文、英文、数字、特殊字符、换行和空格内容，按 Tab 后应用无异常且内容可保存。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- keyboard
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S003-001
+  expected: tests/at/expected/tiptap_scenario_003_001_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf "%b" "tiptapKeyboard中文ABC123!@#\nline2 text spaceok" | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_003_001_s1
+  name: 混合字符回车空格Tab输入
+  description: |
+    新建记事本和文本笔记后，将包含中文、英文、数字、特殊字符、换行和空格的文本粘贴到 Tiptap 编辑区，并补充执行 Tab 键，随后切换笔记触发保存。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - keyboard
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: keyboard_press
+    key: tab
+    wait: 0.3
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

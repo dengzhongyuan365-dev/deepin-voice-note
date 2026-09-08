@@ -1,0 +1,11 @@
+scenario: tiptap_scenario_001
+name: Tiptap默认启动与新建笔记编辑区可用
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 2
+checks:
+  - 默认启动后进入主界面
+  - TiptapWebView 可访问
+  - 新建记事本后可新建文本笔记
+  - 新建笔记后目标记事本和笔记落库

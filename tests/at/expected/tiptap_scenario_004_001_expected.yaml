@@ -1,0 +1,18 @@
+scenario: tiptap_scenario_004_001
+name: 图片粘贴插入并持久化
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    image_count: 1
+    image_relPath_prefix: images/
+    image_files_exist: true
+checks:
+  - 目标记事本存在
+  - 粘贴图片后生成 Tiptap image node
+  - 图片 relPath 使用应用数据目录 images/ 相对路径
+  - 图片文件已落盘

@@ -1,0 +1,15 @@
+scenario: tiptap_scenario_003_002
+name: 全选复制剪切粘贴
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    content_equals: copycutpaste001
+checks:
+  - 目标记事本存在
+  - Ctrl+A/C/Ctrl+X/Ctrl+V 后文本恢复
+  - 目标笔记内容已保存到 Tiptap meta_data

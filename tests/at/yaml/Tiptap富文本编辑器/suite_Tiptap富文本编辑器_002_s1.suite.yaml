@@ -1,0 +1,134 @@
+name: suite_Tiptap富文本编辑器_002_s1_suite
+app: deepin-voice-note
+description: |
+  场景2：新建文本笔记、编辑、切换、持久化。
+  目标：验证 Summernote 切换到 Tiptap 后，核心文本笔记链路可用。
+  覆盖链路：启动应用 -> 新建记事本 -> 新建文本笔记 -> 输入文本 ->
+  新建并切换到其他笔记 -> 切回原笔记 -> 验证应用无异常且详情页仍可用。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  source_cases:
+  - id: '1634839'
+    title: 首次使用语音记事本应用，新建记事本
+    relation: equivalent
+  - id: '1625243'
+    title: 新建记事本
+    relation: equivalent
+  - id: '1634891'
+    title: 新建文本笔记
+    relation: equivalent
+  - id: '1634893'
+    title: 新建笔记，最新新建的排在最上方
+    relation: partial
+  - id: '1634907'
+    title: 切换笔记，详情页同步切换
+    relation: equivalent
+  - id: '1634959'
+    title: 点击文本笔记详情页的文本区域编辑文字内容
+    relation: equivalent
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s tiptapscenario001 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_002_s1
+  name: 新建文本笔记编辑切换持久化
+  description: |
+    基于稳定 fixture 启动应用后，新建一个记事本；在该记事本中新建一条
+    Tiptap 文本笔记，并通过剪贴板粘贴方式输入场景文本；再新建另一条笔记
+    触发切换保存，最后切回原笔记验证详情页仍可用。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本1
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: wait
+    wait: 1.0
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本1
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

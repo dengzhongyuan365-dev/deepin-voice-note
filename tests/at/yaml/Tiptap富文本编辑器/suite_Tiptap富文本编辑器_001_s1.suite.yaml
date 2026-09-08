@@ -1,0 +1,132 @@
+name: suite_Tiptap富文本编辑器_001_s1_suite
+app: deepin-voice-note
+description: |
+  场景1：Tiptap 默认启动与主编辑区可用。
+  目标：验证 Summernote 切换到 Tiptap 后，应用默认启动即可进入
+  Tiptap 编辑链路，主界面、列表区、详情区和 TiptapWebView 均可访问；
+  新建文本笔记后编辑区仍保持可用。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+fast_fail: false
+env_check: []
+trace:
+  feature: Summernote 切换到 Tiptap 富文本编辑器
+  scenario: S001
+  expected: tests/at/expected/tiptap_scenario_001_expected.yaml
+  source_cases:
+  - id: '1676385'
+    title: 从启动器打开应用
+    relation: equivalent
+  - id: '1676573'
+    title: V25语音记事本-主界面显示
+    relation: partial
+  - id: '1676381'
+    title: 验证可以正常启动应用
+    relation: equivalent
+  - id: '1676383'
+    title: 验证可以正常启动应用
+    relation: equivalent
+  - id: '1676341'
+    title: 新建笔记
+    relation: partial
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_001_s1
+  name: Tiptap默认启动与新建笔记编辑区可用
+  description: |
+    基于清库 fixture 启动应用，验证主窗口、记事本列表、笔记列表、详情页
+    和 TiptapWebView 均可访问；随后新建记事本并新建文本笔记，验证切换到
+    新笔记后 Tiptap 编辑区仍存在且应用进程无异常。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: CreateFolderButton
+      role: button
+  - action: assert_element
+    selector:
+      name: NewNoteButton
+      role: button
+  - action: assert_element
+    selector:
+      name: FolderListView
+  - action: assert_element
+    selector:
+      name: NoteItemListView
+  - action: assert_element
+    selector:
+      name: NoteContentWebView
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: CreateFolderButton
+      role: button
+  - action: assert_element
+    selector:
+      name: NewNoteButton
+      role: button
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本1
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: NoteContentWebView
+  - action: assert_element
+    selector:
+      name: TiptapWebView

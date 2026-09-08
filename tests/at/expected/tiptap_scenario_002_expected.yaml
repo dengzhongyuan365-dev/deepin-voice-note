@@ -1,0 +1,22 @@
+scenario: tiptap_scenario_002
+name: 新建文本笔记编辑切换持久化
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 3
+expected_notes:
+  - title: 未命名文本1
+    format: tiptap
+    schemaVersion: 1
+  - title: 未命名文本2
+    format: tiptap
+    schemaVersion: 1
+    content_contains: tiptapscenario001
+  - title: 未命名文本3
+    format: tiptap
+    schemaVersion: 1
+checks:
+  - 目标记事本存在
+  - 目标记事本下存在新建文本笔记
+  - 目标笔记内容保存到 meta_data
+  - 目标笔记使用 Tiptap JSON envelope
