@@ -1,0 +1,73 @@
+name: suite_Tiptap富文本编辑器_005_001_s1_suite
+app: deepin-voice-note
+description: |
+  S005-001：旧 Summernote 数据迁移到 Tiptap 后可打开。
+  目标：验证旧 Summernote 格式笔记经 Tiptap 编辑器迁移后，笔记可正常打开，
+  DB 中 meta_data 已转换为 Tiptap JSON envelope 且旧内容 migrationlegacy001 未丢失。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- migration
+fast_fail: false
+env_check: []
+trace:
+  feature: 旧 Summernote 数据迁移到 Tiptap
+  scenario: S005-001
+  expected: tests/at/expected/tiptap_scenario_005_001_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_legacy_migration_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_005_001_s1
+  name: 旧文本笔记迁移后可打开
+  description: |
+    基于 legacy migration fixture（Summernote htmlCode 格式）启动应用，
+    打开记事本1 中的文本笔记，验证 TiptapWebView 可访问且迁移已完成。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - migration
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本1
+      role: label
+  - action: element_action
+    selector:
+      name: 记事本1
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 文本
+      role: label
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView

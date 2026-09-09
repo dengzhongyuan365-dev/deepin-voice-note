@@ -1,0 +1,17 @@
+scenario: tiptap_scenario_005_001
+name: 旧文本笔记迁移后可打开
+app: deepin-voice-note
+expected_folder:
+  title: 记事本1
+  min_note_count: 1
+expected_notes:
+  - title: 文本
+    format: tiptap
+    schemaVersion: 1
+    content_contains:
+      - migrationlegacy001
+checks:
+  - 记事本1 存在
+  - 文本笔记可打开
+  - 文本笔记 meta_data 已转换为 Tiptap JSON envelope
+  - DB 中旧内容 migrationlegacy001 未丢失

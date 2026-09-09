@@ -1,0 +1,124 @@
+name: suite_Tiptap富文本编辑器_005_003_s1_suite
+app: deepin-voice-note
+description: |
+  S005-003：旧 Summernote 数据迁移到 Tiptap 后重启持久化。
+  目标：验证迁移并追加编辑后，停止应用再重启（不清空 DB），数据仍持久化：
+  DB 中文本笔记仍为 Tiptap JSON envelope，同时包含 migrationlegacy001 和 migrationpersist003，
+  folder 记事本1 中 note 数量不少于 2。
+module: Tiptap富文本编辑器
+tags:
+- L1
+- smoke
+- tiptap
+- migration
+- persistence
+fast_fail: false
+env_check: []
+trace:
+  feature: 旧 Summernote 数据迁移到 Tiptap
+  scenario: S005-003
+  expected: tests/at/expected/tiptap_scenario_005_003_expected.yaml
+setup:
+- action: session_start
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s migrationpersist003 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_legacy_migration_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_Tiptap富文本编辑器_005_003_s1
+  name: 迁移后重启持久化
+  description: |
+    基于 legacy migration fixture 启动应用并将 migrationpersist003 放入剪贴板；
+    打开记事本1 和文本笔记，点击 TiptapWebView 聚焦编辑区后粘贴 migrationpersist003；
+    新建另一条笔记触发切换保存；停止应用后再次启动（不清空 DB），
+    重新打开记事本1 和文本笔记，验证 TiptapWebView 可访问且数据已持久化。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - migration
+  - persistence
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: element_action
+    selector:
+      name: 记事本1
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 文本
+      role: label
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: session_stop
+    wait: 1.0
+  - action: session_start
+    command: bash -lc 'QML_DISABLE_DISK_CACHE=1 exec deepin-voice-note'
+    wait: 6.0
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: element_action
+    selector:
+      name: 记事本1
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 文本
+      role: label
+  - action: element_action
+    selector:
+      name: 文本
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
