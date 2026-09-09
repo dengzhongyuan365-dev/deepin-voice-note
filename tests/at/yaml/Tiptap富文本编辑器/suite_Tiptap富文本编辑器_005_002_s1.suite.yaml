@@ -11,11 +11,21 @@ tags:
 - tiptap
 - migration
 fast_fail: false
-env_check: []
+env_check:
+- type: file_exists
+  name: /usr/bin/sqlite3
+  expect: exists
+- type: file_exists
+  name: /usr/bin/xclip
+  expect: exists
+- type: file_exists
+  name: /usr/bin/python3
+  expect: exists
 trace:
   feature: 旧 Summernote 数据迁移到 Tiptap
   scenario: S005-002
   expected: tests/at/expected/tiptap_scenario_005_002_expected.yaml
+  post_check: python3 tests/at/scripts/assert_tiptap_scenario_db.py tests/at/expected/tiptap_scenario_005_002_expected.yaml
 setup:
 - action: session_start
   command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s migrationappend002 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_legacy_migration_at.sh'

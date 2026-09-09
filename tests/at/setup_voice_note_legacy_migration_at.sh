@@ -15,7 +15,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DATA_DIR="${HOME}/.local/share/deepin/deepin-voice-note"
 CONFIG_DIR="${HOME}/.config/deepin/deepin-voice-note"
 DB_PATH="${DATA_DIR}/deepin-voice-note1.0.db"
-FIXTURE_DB="${PROJECT_ROOT}/tests/at/fixtures/summernote_legacy_migration.db"
+FIXTURE_SQL="${PROJECT_ROOT}/tests/at/fixtures/summernote_legacy_migration.sql"
 
 stop_app()
 {
@@ -81,8 +81,8 @@ if ! command -v sqlite3 >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ ! -f "${FIXTURE_DB}" ]]; then
-    echo "AT legacy migration fixture database not found: ${FIXTURE_DB}" >&2
+if [[ ! -f "${FIXTURE_SQL}" ]]; then
+    echo "AT legacy migration fixture SQL not found: ${FIXTURE_SQL}" >&2
     exit 1
 fi
 
@@ -91,7 +91,7 @@ clean_qml_cache
 rm -rf -- "${DATA_DIR}" "${CONFIG_DIR}"
 mkdir -p -- "${DATA_DIR}" "${CONFIG_DIR}"
 
-cp -f -- "${FIXTURE_DB}" "${DB_PATH}"
+sqlite3 "${DB_PATH}" < "${FIXTURE_SQL}"
 wait_for_schema
 verify_fixture_data
 
