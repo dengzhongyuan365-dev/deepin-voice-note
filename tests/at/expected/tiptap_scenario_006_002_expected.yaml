@@ -1,0 +1,16 @@
+scenario: tiptap_scenario_006_002
+name: 删除线格式
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 2
+db_assert:
+  script: tests/at/scripts/assert_tiptap_scenario_db.py
+  args:
+    - --note-text
+    - strikeformat006
+    - --marks-contains
+    - strike
+checks:
+  - Ctrl+Shift+S 设置删除线 mark
+  - 切换笔记后 DB 中目标笔记包含 strike mark

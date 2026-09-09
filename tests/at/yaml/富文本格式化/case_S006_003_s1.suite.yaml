@@ -1,21 +1,121 @@
-name: 富文本格式化(#S006)_case_S006_003_s1_suite
+name: suite_S006_003_s1_suite
 app: deepin-voice-note
-description: '有序/无序列表'
-module: 富文本格式化(#S006)
-tags: []
+description: |
+  S006-003：Tiptap 有序/无序列表。
+  目标：验证 Tiptap 编辑器中 Ctrl+Shift+8（无序列表）和 Ctrl+Shift+7（有序列表）
+  快捷键可切换列表格式，切换笔记触发保存后 DB 中目标笔记包含
+  bulletList 或 orderedList node type。
+module: 富文本格式化
+tags:
+- L1
+- smoke
+- tiptap
+- formatting
 fast_fail: false
 env_check: []
+trace:
+  feature: Tiptap 富文本格式化快捷键
+  scenario: S006-003
+  expected: tests/at/expected/tiptap_scenario_006_003_expected.yaml
 setup:
 - action: session_start
-  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s listformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
   wait: 6.0
 teardown:
 - action: session_stop
 suites:
 - id: case_S006_003_s1
   name: 有序无序列表
-  description: '确认Tiptap列表入口稳定性后执行有序/无序列表格式化'
-  tags: []
-  skip: '列表入口缺少稳定 AT-SPI 名称或快捷输入规则未确认'
-  steps: []
-  assert_steps: []
+  description: |
+    新建记事本和文本笔记后，将文本粘贴到 Tiptap 编辑区，
+    执行 Ctrl+Shift+8 将当前段落转为无序列表（bulletList），
+    再执行 Ctrl+Shift+7 切换为有序列表（orderedList），
+    随后切换笔记触发保存，DB 中目标笔记应包含 bulletList 或 orderedList node type。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - formatting
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+v
+    wait: 0.5
+  - action: keyboard_hot_key
+    key: ctrl+shift+8
+    wait: 0.3
+  - action: keyboard_hot_key
+    key: ctrl+shift+7
+    wait: 0.3
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: element_action
+    selector:
+      name: 未命名文本2
+      role: label
+    do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+  - action: wait
+    wait: 0.5
+  assert_steps:
+  - action: assert_process_running
+    app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

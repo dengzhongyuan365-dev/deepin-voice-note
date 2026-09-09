@@ -1,0 +1,18 @@
+scenario: tiptap_scenario_006_001
+name: 加粗斜体下划线快捷键格式化
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 2
+db_assert:
+  script: tests/at/scripts/assert_tiptap_scenario_db.py
+  args:
+    - --note-text
+    - richtextformat006
+    - --marks-contains
+    - bold,italic,underline
+checks:
+  - Ctrl+B 设置加粗 mark
+  - Ctrl+I 设置斜体 mark
+  - Ctrl+U 设置下划线 mark
+  - 切换笔记后 DB 中目标笔记包含 bold、italic、underline marks

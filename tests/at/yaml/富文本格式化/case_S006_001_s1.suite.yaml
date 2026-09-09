@@ -1,65 +1,125 @@
-name: 富文本格式化(#S006)_case_S006_001_s1_suite
+name: suite_S006_001_s1_suite
 app: deepin-voice-note
-description: '加粗、斜体、下划线快捷键格式化'
-module: 富文本格式化(#S006)
-tags: []
+description: |
+  S006-001：Tiptap 加粗、斜体、下划线快捷键格式化。
+  目标：验证 Tiptap 编辑器中 Ctrl+B/I/U 快捷键可设置文本格式 marks，
+  切换笔记触发保存后 DB 中目标笔记包含 bold、italic、underline marks。
+module: 富文本格式化
+tags:
+- L1
+- smoke
+- tiptap
+- formatting
 fast_fail: false
 env_check: []
+trace:
+  feature: Tiptap 富文本格式化快捷键
+  scenario: S006-001
+  expected: tests/at/expected/tiptap_scenario_006_001_expected.yaml
 setup:
 - action: session_start
-  command: bash -lc 'echo -n richtextformat006 | xclip -selection clipboard; exec ./tests/at/setup_voice_note_at.sh'
+  command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s richtextformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
   wait: 6.0
 teardown:
 - action: session_stop
 suites:
 - id: case_S006_001_s1
   name: 加粗斜体下划线快捷键格式化
-  description: '通过Ctrl+B/I/U对粘贴文本设置加粗、斜体、下划线，切换笔记触发保存后验证'
-  tags: []
+  description: |
+    新建记事本和文本笔记后，将文本粘贴到 Tiptap 编辑区，
+    全选后依次执行 Ctrl+B（加粗）、Ctrl+I（斜体）、Ctrl+U（下划线），
+    随后切换笔记触发保存，DB 中目标笔记应包含 bold、italic、underline marks。
+  tags:
+  - L1
+  - smoke
+  - tiptap
+  - formatting
   steps:
   - action: assert_element
     selector:
       name: VoiceNoteMainWindow
-      role: window
+  - action: assert_element
+    selector:
+      name: TiptapWebView
   - action: element_action
     selector:
       name: CreateFolderButton
       role: button
     do: click
+    wait: 0.8
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
   - action: element_action
     selector:
       name: NewNoteButton
       role: button
     do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
   - action: element_action
     selector:
       name: TiptapWebView
-      role: panel
     do: click
+    wait: 0.5
   - action: keyboard_hot_key
     key: ctrl+v
+    wait: 0.5
   - action: keyboard_hot_key
     key: ctrl+a
+    wait: 0.3
   - action: keyboard_hot_key
     key: ctrl+b
+    wait: 0.3
   - action: keyboard_hot_key
     key: ctrl+i
+    wait: 0.3
   - action: keyboard_hot_key
     key: ctrl+u
+    wait: 0.3
   - action: element_action
     selector:
       name: NewNoteButton
       role: button
     do: click
+    wait: 1.0
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
   - action: element_action
     selector:
-      name: NoteItemListView
-      role: list
+      name: 未命名文本2
+      role: label
     do: click
-  assert_steps:
+    wait: 0.8
   - action: assert_element
     selector:
       name: TiptapWebView
-      role: panel
+  - action: wait
+    wait: 0.5
+  assert_steps:
   - action: assert_process_running
     app: deepin-voice-note
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - action: assert_element
+    selector:
+      name: 记事本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本2
+      role: label
+  - action: assert_element
+    selector:
+      name: 未命名文本3
+      role: label
+  - action: assert_element
+    selector:
+      name: TiptapWebView

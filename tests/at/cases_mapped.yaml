@@ -50,8 +50,8 @@ metadata:
   generated_at: '2026-07-17T12:00:00'
   description: AT-SPI语义映射用例，供youqu at generate使用
   total_cases: 248
-  active_cases: 32
-  unsupported_cases: 216
+  active_cases: 34
+  unsupported_cases: 214
   non_gui_cases: 18 (见 cases_non_gui.yaml)
 
 cases:
@@ -2696,24 +2696,36 @@ cases:
     steps:
       - step_type: action
         action: session_start
-        command: bash -lc 'echo -n richtextformat006 | xclip -selection clipboard; exec ./tests/at/setup_voice_note_at.sh'
+        command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s richtextformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
         wait: 6.0
         description: 清库启动应用并设置剪贴板内容richtextformat006
       - step_type: assert
         action: assert_element
-        selector: {role: "window", name: "VoiceNoteMainWindow"}
+        selector: {name: "VoiceNoteMainWindow"}
         description: 断言VoiceNoteMainWindow存在
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
+        description: 断言TiptapWebView存在
       - step_type: action
         action: element_action
         selector: {role: "button", name: "CreateFolderButton"}
         description: 点击CreateFolderButton新建记事本
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "记事本2"}
+        description: 断言记事本2存在
       - step_type: action
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建文本笔记
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "未命名文本2"}
+        description: 断言未命名文本2存在
       - step_type: action
         action: element_action
-        selector: {role: "panel", name: "TiptapWebView"}
+        selector: {name: "TiptapWebView"}
         description: 点击TiptapWebView聚焦编辑区
       - step_type: action
         action: keyboard_hot_key
@@ -2739,27 +2751,173 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建另一条笔记触发保存
-      - step_type: action
-        action: element_action
-        selector: {role: "list", name: "NoteItemListView"}
-        description: 点击原目标笔记切回
       - step_type: assert
         action: assert_element
-        selector: {role: "panel", name: "TiptapWebView"}
+        selector: {role: "label", name: "未命名文本3"}
+        description: 断言未命名文本3存在
+      - step_type: action
+        action: element_action
+        selector: {role: "label", name: "未命名文本2"}
+        description: 点击未命名文本2切回原笔记
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
         description: 断言TiptapWebView存在
       - step_type: assert
         action: assert_process_running
         app: deepin-voice-note
         description: 断言应用进程仍运行
+      - step_type: assert
+        action: assert_element
+        selector: {name: "VoiceNoteMainWindow"}
+        description: 断言主窗口存在
 
   - id: case_S006_002
     name: 删除线格式
     module: 富文本格式化
-    status: unsupported
-    reason: "删除线入口缺少稳定 AT-SPI 名称或快捷键未确认"
+    status: active
+    steps:
+      - step_type: action
+        action: session_start
+        command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s strikeformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+        wait: 6.0
+        description: 清库启动应用并设置剪贴板内容strikeformat006
+      - step_type: assert
+        action: assert_element
+        selector: {name: "VoiceNoteMainWindow"}
+        description: 断言VoiceNoteMainWindow存在
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
+        description: 断言TiptapWebView存在
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "CreateFolderButton"}
+        description: 点击CreateFolderButton新建记事本
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "记事本2"}
+        description: 断言记事本2存在
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "NewNoteButton"}
+        description: 点击NewNoteButton新建文本笔记
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "未命名文本2"}
+        description: 断言未命名文本2存在
+      - step_type: action
+        action: element_action
+        selector: {name: "TiptapWebView"}
+        description: 点击TiptapWebView聚焦编辑区
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+v"
+        description: Ctrl+V粘贴strikeformat006
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+a"
+        description: Ctrl+A全选
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+shift+s"
+        description: Ctrl+Shift+S设置删除线
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "NewNoteButton"}
+        description: 点击NewNoteButton新建另一条笔记触发保存
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "未命名文本3"}
+        description: 断言未命名文本3存在
+      - step_type: action
+        action: element_action
+        selector: {role: "label", name: "未命名文本2"}
+        description: 点击未命名文本2切回原笔记
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
+        description: 断言TiptapWebView存在
+      - step_type: assert
+        action: assert_process_running
+        app: deepin-voice-note
+        description: 断言应用进程仍运行
+      - step_type: assert
+        action: assert_element
+        selector: {name: "VoiceNoteMainWindow"}
+        description: 断言主窗口存在
 
   - id: case_S006_003
     name: 有序无序列表
     module: 富文本格式化
-    status: unsupported
-    reason: "列表入口缺少稳定 AT-SPI 名称或快捷输入规则未确认"
+    status: active
+    steps:
+      - step_type: action
+        action: session_start
+        command: bash -lc 'command -v xclip >/dev/null || { echo xclip is required for clipboard paste >&2; exit 127; }; printf %s listformat006 | xclip -selection clipboard -loops 10 >/dev/null 2>&1 & exec ./tests/at/setup_voice_note_at.sh'
+        wait: 6.0
+        description: 清库启动应用并设置剪贴板内容listformat006
+      - step_type: assert
+        action: assert_element
+        selector: {name: "VoiceNoteMainWindow"}
+        description: 断言VoiceNoteMainWindow存在
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
+        description: 断言TiptapWebView存在
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "CreateFolderButton"}
+        description: 点击CreateFolderButton新建记事本
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "记事本2"}
+        description: 断言记事本2存在
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "NewNoteButton"}
+        description: 点击NewNoteButton新建文本笔记
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "未命名文本2"}
+        description: 断言未命名文本2存在
+      - step_type: action
+        action: element_action
+        selector: {name: "TiptapWebView"}
+        description: 点击TiptapWebView聚焦编辑区
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+v"
+        description: Ctrl+V粘贴listformat006
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+shift+8"
+        description: Ctrl+Shift+8设置无序列表
+      - step_type: action
+        action: keyboard_hot_key
+        key: "ctrl+shift+7"
+        description: Ctrl+Shift+7切换为有序列表
+      - step_type: action
+        action: element_action
+        selector: {role: "button", name: "NewNoteButton"}
+        description: 点击NewNoteButton新建另一条笔记触发保存
+      - step_type: assert
+        action: assert_element
+        selector: {role: "label", name: "未命名文本3"}
+        description: 断言未命名文本3存在
+      - step_type: action
+        action: element_action
+        selector: {role: "label", name: "未命名文本2"}
+        description: 点击未命名文本2切回原笔记
+      - step_type: assert
+        action: assert_element
+        selector: {name: "TiptapWebView"}
+        description: 断言TiptapWebView存在
+      - step_type: assert
+        action: assert_process_running
+        app: deepin-voice-note
+        description: 断言应用进程仍运行
+      - step_type: assert
+        action: assert_element
+        selector: {name: "VoiceNoteMainWindow"}
+        description: 断言主窗口存在

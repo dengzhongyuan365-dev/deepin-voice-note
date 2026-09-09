@@ -1,0 +1,17 @@
+scenario: tiptap_scenario_006_003
+name: 有序无序列表
+app: deepin-voice-note
+expected_folder:
+  title: 记事本2
+  min_note_count: 2
+db_assert:
+  script: tests/at/scripts/assert_tiptap_scenario_db.py
+  args:
+    - --note-text
+    - listformat006
+    - --node-type-contains
+    - orderedList,bulletList
+checks:
+  - Ctrl+Shift+8 设置无序列表（bulletList）
+  - Ctrl+Shift+7 切换为有序列表（orderedList）
+  - 切换笔记后 DB 中目标笔记包含 bulletList 或 orderedList node type
