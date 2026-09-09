@@ -1,0 +1,18 @@
+scenario: tiptap_scenario_005_002
+name: 迁移后追加编辑并保存
+app: deepin-voice-note
+expected_folder:
+  title: 记事本1
+  min_note_count: 2
+expected_notes:
+  - title: 文本
+    format: tiptap
+    schemaVersion: 1
+    content_contains:
+      - migrationlegacy001
+      - migrationappend002
+checks:
+  - 记事本1 存在
+  - 文本笔记为 Tiptap JSON envelope
+  - DB 中同时包含 migrationlegacy001 和 migrationappend002
+  - folder 记事本1 中 note 数量不少于 2

@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+APP_NAME="deepin-voice-note"
+
+if [[ -z "${HOME:-}" || "${HOME}" == "/" ]]; then
+    echo "Invalid HOME: ${HOME:-<empty>}" >&2
+    exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+DATA_DIR="${HOME}/.local/share/deepin/deepin-voice-note"
+CONFIG_DIR="${HOME}/.config/deepin/deepin-voice-note"
+DB_PATH="${DATA_DIR}/deepin-voice-note1.0.db"
+FIXTURE_SQL="${PROJECT_ROOT}/tests/at/fixtures/summernote_legacy_migration.sql"
+
+stop_app()
+{
+    killall -q "${APP_NAME}" 2>/dev/null || true
+}
+
+clean_qml_cache()
+{
+    local cache_dir="${HOME}/.cache/deepin/${APP_NAME}/qmlcache"
+
+    if [[ -d "${cache_dir}" ]]; then
+        echo "Clean QML cache: ${cache_dir}"
+        rm -rf -- "${cache_dir}"
+    fi
+
+    export QML_DISABLE_DISK_CACHE=1
+}
+
+wait_for_schema()
+{
+    local table_count
+
+    table_count="$(sqlite3 "${DB_PATH}" \
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('vnote_folder_tbl', 'vnote_items_tbl', 'vnote_category_tbl');")"
+
+    if [[ "${table_count}" != "3" ]]; then
+        echo "Invalid AT fixture database schema: expected 3 tables, got ${table_count}" >&2
+        return 1
+    fi
+}
+
+verify_fixture_data()
+{
+    local folder_count
+    local note_count
+    local legacy_meta
+
+    folder_count="$(sqlite3 "${DB_PATH}" \
+        "SELECT COUNT(*) FROM vnote_folder_tbl WHERE folder_id=1 AND folder_name='记事本1' AND folder_state=0;")"
+    note_count="$(sqlite3 "${DB_PATH}" \
+        "SELECT COUNT(*) FROM vnote_items_tbl WHERE note_id=1 AND folder_id=1 AND note_title='文本' AND note_state=0;")"
+    legacy_meta="$(sqlite3 "${DB_PATH}" \
+        "SELECT meta_data FROM vnote_items_tbl WHERE note_id=1;")"
+
+    if [[ "${folder_count}" != "1" || "${note_count}" != "1" ]]; then
+        echo "Invalid AT fixture database data: folder_count=${folder_count}, note_count=${note_count}" >&2
+        return 1
+    fi
+
+    if [[ "${legacy_meta}" != *migrationlegacy001* ]]; then
+        echo "Invalid AT fixture: legacy meta_data does not contain migrationlegacy001" >&2
+        return 1
+    fi
+
+    if [[ "${legacy_meta}" == *'"format":"tiptap"'* ]]; then
+        echo "Invalid AT fixture: legacy meta_data is already in Tiptap format (expected Summernote htmlCode)" >&2
+        return 1
+    fi
+}
+
+if ! command -v sqlite3 >/dev/null 2>&1; then
+    echo "sqlite3 is required for AT fixture validation" >&2
+    exit 1
+fi
+
+if [[ ! -f "${FIXTURE_SQL}" ]]; then
+    echo "AT legacy migration fixture SQL not found: ${FIXTURE_SQL}" >&2
+    exit 1
+fi
+
+stop_app
+clean_qml_cache
+rm -rf -- "${DATA_DIR}" "${CONFIG_DIR}"
+mkdir -p -- "${DATA_DIR}" "${CONFIG_DIR}"
+
+sqlite3 "${DB_PATH}" < "${FIXTURE_SQL}"
+wait_for_schema
+verify_fixture_data
+
+exec "${APP_NAME}"
