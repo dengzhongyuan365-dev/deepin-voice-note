@@ -1,0 +1,65 @@
+name: 富文本格式化(#S006)_case_S006_001_s1_suite
+app: deepin-voice-note
+description: '加粗、斜体、下划线快捷键格式化'
+module: 富文本格式化(#S006)
+tags: []
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'echo -n richtextformat006 | xclip -selection clipboard; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: case_S006_001_s1
+  name: 加粗斜体下划线快捷键格式化
+  description: '通过Ctrl+B/I/U对粘贴文本设置加粗、斜体、下划线，切换笔记触发保存后验证'
+  tags: []
+  steps:
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+      role: window
+  - action: element_action
+    selector:
+      name: CreateFolderButton
+      role: button
+    do: click
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+  - action: element_action
+    selector:
+      name: TiptapWebView
+      role: panel
+    do: click
+  - action: keyboard_hot_key
+    key: ctrl+v
+  - action: keyboard_hot_key
+    key: ctrl+a
+  - action: keyboard_hot_key
+    key: ctrl+b
+  - action: keyboard_hot_key
+    key: ctrl+i
+  - action: keyboard_hot_key
+    key: ctrl+u
+  - action: element_action
+    selector:
+      name: NewNoteButton
+      role: button
+    do: click
+  - action: element_action
+    selector:
+      name: NoteItemListView
+      role: list
+    do: click
+  assert_steps:
+  - action: assert_element
+    selector:
+      name: TiptapWebView
+      role: panel
+  - action: assert_process_running
+    app: deepin-voice-note

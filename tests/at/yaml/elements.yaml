@@ -20,3 +20,15 @@ elements:
   取 消:
     name: 取 消
     role: button
+  主窗口:
+    name: VoiceNoteMainWindow
+    role: window
+  新建笔记按钮:
+    name: NewNoteButton
+    role: button
+  编辑区:
+    name: TiptapWebView
+    role: panel
+  笔记列表:
+    name: NoteItemListView
+    role: list

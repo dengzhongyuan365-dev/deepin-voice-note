@@ -1,0 +1,21 @@
+name: 富文本格式化(#S006)_case_S006_003_s1_suite
+app: deepin-voice-note
+description: '有序/无序列表'
+module: 富文本格式化(#S006)
+tags: []
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: case_S006_003_s1
+  name: 有序无序列表
+  description: '确认Tiptap列表入口稳定性后执行有序/无序列表格式化'
+  tags: []
+  skip: '列表入口缺少稳定 AT-SPI 名称或快捷输入规则未确认'
+  steps: []
+  assert_steps: []

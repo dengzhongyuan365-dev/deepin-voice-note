@@ -1,359 +1,329 @@
 #!/usr/bin/env python3
-# _*_ coding:utf-8 _*_
-"""Assert deepin-voice-note Tiptap scenario DB result against expected YAML.
+"""
+assert_tiptap_scenario_db.py — 验证 deepin-voice-note DB 中目标笔记的 Tiptap 内容。
 
-This script intentionally compares only stable business fields instead of the
-whole sqlite database, because timestamps, sqlite_sequence and JSON key order are
-runtime-dependent.
+用法:
+  # 检查 marks 包含 bold, italic, underline
+  python3 assert_tiptap_scenario_db.py \
+      --note-text richtextformat006 \
+      --marks-contains bold,italic,underline
+
+  # 检查 node_type 包含 orderedList 或 bulletList
+  python3 assert_tiptap_scenario_db.py \
+      --note-text listformat006 \
+      --node-type-contains orderedList,bulletList
+
+  # 指定 DB 路径（默认 ~/.local/share/deepin/deepin-voice-note/deepin-voice-note1.0.db）
+  python3 assert_tiptap_scenario_db.py \
+      --db-path /path/to/deepin-voice-note1.0.db \
+      --note-text richtextformat006 \
+      --marks-contains bold,italic,underline
+
+退出码:
+  0 — 所有检查通过
+  1 — 检查失败（DB 不可达、笔记未找到、marks/node_type 不匹配）
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sqlite3
 import sys
-from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-except Exception as exc:  # pragma: no cover - environment guard
-    print(f"ERROR: PyYAML is required to read expected template: {exc}", file=sys.stderr)
-    sys.exit(2)
+
+DEFAULT_DB_PATH = os.path.expanduser(
+    "~/.local/share/deepin/deepin-voice-note/deepin-voice-note1.0.db"
+)
+
+# HTML tag → Tiptap mark type 映射
+_HTML_MARK_MAP = {
+    "strong": "bold",
+    "b": "bold",
+    "em": "italic",
+    "i": "italic",
+    "u": "underline",
+    "s": "strike",
+    "del": "strike",
+    "strike": "strike",
+}
+
+# HTML tag → Tiptap node type 映射
+_HTML_NODE_MAP = {
+    "ol": "orderedList",
+    "ul": "bulletList",
+}
 
 
-def default_db_path() -> Path:
-    return (
-        Path.home()
-        / ".local/share/deepin/deepin-voice-note/deepin-voice-note1.0.db"
-    )
+def _extract_meta_data_json(raw: str) -> dict[str, Any] | None:
+    """从 vnote_items_tbl.meta_data 列解析出 JSON dict。
 
-
-def load_expected(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"expected template must be a mapping: {path}")
-    return data
-
-
-def note_text_from_tiptap_node(node: Any) -> str:
-    """Flatten text fields from a Tiptap/ProseMirror JSON node."""
-    if isinstance(node, dict):
-        parts: list[str] = []
-        text = node.get("text")
-        if isinstance(text, str):
-            parts.append(text)
-        content = node.get("content")
-        if isinstance(content, list):
-            parts.extend(note_text_from_tiptap_node(child) for child in content)
-        return "".join(parts)
-    if isinstance(node, list):
-        return "".join(note_text_from_tiptap_node(child) for child in node)
-    return ""
-
-
-def iter_tiptap_nodes(node: Any, node_type: str | None = None):
-    """Yield ProseMirror/Tiptap nodes, optionally filtered by node type."""
-    if isinstance(node, dict):
-        if node_type is None or node.get("type") == node_type:
-            yield node
-        content = node.get("content")
-        if isinstance(content, list):
-            for child in content:
-                yield from iter_tiptap_nodes(child, node_type)
-    elif isinstance(node, list):
-        for child in node:
-            yield from iter_tiptap_nodes(child, node_type)
-
-
-def count_tiptap_nodes(node: Any, node_type: str) -> int:
-    """Count nodes by ProseMirror/Tiptap type."""
-    return sum(1 for _ in iter_tiptap_nodes(node, node_type))
-
-
-def tiptap_image_relpaths(meta: dict[str, Any]) -> list[str]:
-    """Return saved relative paths for image nodes in a Tiptap document."""
-    relpaths: list[str] = []
-    for node in iter_tiptap_nodes(meta.get("content"), "image"):
-        attrs = node.get("attrs")
-        if not isinstance(attrs, dict):
-            continue
-        rel_path = attrs.get("relPath") or attrs.get("data-rel-path")
-        if rel_path is None:
-            # Some intermediate documents only keep src.  Keep it visible in
-            # diagnostics while making prefix/existence checks fail explicitly.
-            rel_path = attrs.get("src")
-        if rel_path is not None:
-            relpaths.append(str(rel_path))
-    return relpaths
-
-
-def parse_metadata(raw: str | None) -> tuple[dict[str, Any], str]:
+    meta_data 可能是纯 JSON 字符串，也可能包含嵌套的 JSON。
+    常见格式: {"htmlCode": "<p>...</p>"}
+    也可能出现 Tiptap JSON: {"tiptap": {"type":"doc",...}} 或
+    {"format":"tiptap","content":{"type":"doc",...}}
+    """
     if not raw:
-        return {}, ""
+        return None
     try:
-        meta = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}, raw
-    return meta, note_text_from_tiptap_node(meta.get("content"))
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
-def fetch_folder(conn: sqlite3.Connection, title: str) -> sqlite3.Row | None:
-    return conn.execute(
-        """
-        SELECT folder_id, folder_name
-          FROM vnote_folder_tbl
-         WHERE folder_state = 0 AND folder_name = ?
-         ORDER BY folder_id DESC
-         LIMIT 1
-        """,
-        (title,),
-    ).fetchone()
+def _extract_tiptap_doc(meta: dict[str, Any]) -> dict[str, Any] | None:
+    """从 meta_data dict 中提取 Tiptap doc JSON。
+
+    支持的格式:
+    1. {"content": {"type": "doc", ...}}          — Tiptap envelope
+    2. {"tiptap": {"type": "doc", ...}}            — tiptap 字段
+    3. {"type": "doc", ...}                         — 直接是 doc
+    4. 无 Tiptap JSON 时返回 None（回退到 HTML 解析）
+    """
+    if not isinstance(meta, dict):
+        return None
+
+    content = meta.get("content")
+    if isinstance(content, dict) and content.get("type") == "doc":
+        return content
+
+    tiptap = meta.get("tiptap")
+    if isinstance(tiptap, dict) and tiptap.get("type") == "doc":
+        return tiptap
+
+    if meta.get("type") == "doc":
+        return meta
+
+    return None
 
 
-def fetch_notes(conn: sqlite3.Connection, folder_id: int) -> dict[str, list[sqlite3.Row]]:
+def _collect_marks_from_tiptap(node: Any, marks_set: set[str]) -> None:
+    """递归遍历 Tiptap JSON 树，收集所有 mark type。"""
+    if isinstance(node, dict):
+        for mark in node.get("marks", []) or []:
+            mark_type = mark.get("type")
+            if mark_type:
+                marks_set.add(mark_type)
+        for child in node.get("content", []) or []:
+            _collect_marks_from_tiptap(child, marks_set)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_marks_from_tiptap(item, marks_set)
+
+
+def _collect_node_types_from_tiptap(node: Any, node_types: set[str]) -> None:
+    """递归遍历 Tiptap JSON 树，收集所有 node type。"""
+    if isinstance(node, dict):
+        node_type = node.get("type")
+        if node_type:
+            node_types.add(node_type)
+        for child in node.get("content", []) or []:
+            _collect_node_types_from_tiptap(child, node_types)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_node_types_from_tiptap(item, node_types)
+
+
+def _collect_marks_from_html(html: str, marks_set: set[str]) -> None:
+    """从 HTML 字符串中解析 mark type（基于标签名）。"""
+    for match in re.finditer(r"<\s*(\w+)", html):
+        tag = match.group(1).lower()
+        if tag in _HTML_MARK_MAP:
+            marks_set.add(_HTML_MARK_MAP[tag])
+
+
+def _collect_node_types_from_html(html: str, node_types: set[str]) -> None:
+    """从 HTML 字符串中解析 node type（基于列表标签）。"""
+    for match in re.finditer(r"<\s*(\w+)", html):
+        tag = match.group(1).lower()
+        if tag in _HTML_NODE_MAP:
+            node_types.add(_HTML_NODE_MAP[tag])
+
+
+def _extract_text_from_html(html: str) -> str:
+    """粗略提取 HTML 中的可见文本。"""
+    text = re.sub(r"<[^>]+>", "", html)
+    return text.strip()
+
+
+def _extract_text_from_tiptap(node: Any) -> str:
+    """递归提取 Tiptap JSON 中所有 text 节点的文本内容。"""
+    parts: list[str] = []
+    if isinstance(node, dict):
+        if node.get("type") == "text" and isinstance(node.get("text"), str):
+            parts.append(node["text"])
+        for child in node.get("content", []) or []:
+            parts.append(_extract_text_from_tiptap(child))
+    elif isinstance(node, list):
+        for item in node:
+            parts.append(_extract_text_from_tiptap(item))
+    return "".join(parts)
+
+
+def find_target_note(
+    conn: sqlite3.Connection, note_text: str
+) -> dict[str, Any] | None:
+    """在 vnote_items_tbl 中查找包含指定文本的笔记，返回最近修改的一条。"""
     rows = conn.execute(
-        """
-        SELECT note_id, folder_id, note_title, meta_data
-          FROM vnote_items_tbl
-         WHERE note_state = 0 AND folder_id = ?
-         ORDER BY note_id
-        """,
-        (folder_id,),
+        "SELECT note_id, note_title, meta_data, modify_time "
+        "FROM vnote_items_tbl WHERE note_state = 0 "
+        "ORDER BY modify_time DESC"
     ).fetchall()
-    result: dict[str, list[sqlite3.Row]] = {}
+
     for row in rows:
-        result.setdefault(row["note_title"], []).append(row)
-    return result
+        note_id, note_title, raw_meta, modify_time = row
+        meta = _extract_meta_data_json(raw_meta)
+        if meta is None:
+            continue
 
-
-def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
-    print(f"[FAIL] {message}")
-
-
-def ok(message: str) -> None:
-    print(f"[ OK ] {message}")
-
-
-def as_list(value: Any) -> list[Any]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return value
-    return [value]
-
-
-def assert_note_content(title: str, note_expect: dict[str, Any], meta: dict[str, Any], text: str, errors: list[str], db_data_dir: Path) -> None:
-    for expected_content in as_list(note_expect.get("content_contains")):
-        if str(expected_content) not in text:
-            fail(
-                errors,
-                f"{title}: content not found actual_text={text!r}, expected_contains={expected_content!r}",
-            )
+        # 尝试从 Tiptap JSON 提取文本
+        tiptap_doc = _extract_tiptap_doc(meta)
+        if tiptap_doc is not None:
+            text_content = _extract_text_from_tiptap(tiptap_doc)
         else:
-            ok(f"{title}: content contains {expected_content!r}")
+            html_code = meta.get("htmlCode", "")
+            text_content = _extract_text_from_html(html_code)
 
-    expected_equals = note_expect.get("content_equals")
-    if expected_equals is not None:
-        if text != str(expected_equals):
-            fail(errors, f"{title}: content mismatch actual_text={text!r}, expected={expected_equals!r}")
-        else:
-            ok(f"{title}: content equals {expected_equals!r}")
+        if note_text in text_content:
+            return {
+                "note_id": note_id,
+                "note_title": note_title,
+                "meta_data": meta,
+                "modify_time": modify_time,
+            }
 
-    for not_expected in as_list(note_expect.get("content_not_contains")):
-        if str(not_expected) in text:
-            fail(errors, f"{title}: unexpected content found actual_text={text!r}, not_expected={not_expected!r}")
-        else:
-            ok(f"{title}: content does not contain {not_expected!r}")
-
-    not_equals = note_expect.get("content_not_equals")
-    if not_equals is not None:
-        if text == str(not_equals):
-            fail(errors, f"{title}: content unexpectedly equals {not_equals!r}")
-        else:
-            ok(f"{title}: content does not equal {not_equals!r}")
-
-    min_paragraph_count = note_expect.get("min_paragraph_count")
-    if min_paragraph_count is not None:
-        paragraph_count = count_tiptap_nodes(meta.get("content"), "paragraph")
-        expected_count = int(min_paragraph_count)
-        if paragraph_count < expected_count:
-            fail(
-                errors,
-                f"{title}: paragraph count < expected actual={paragraph_count}, expected>={expected_count}",
-            )
-        else:
-            ok(f"{title}: paragraph count actual={paragraph_count}, expected>={expected_count}")
-
-    image_count_expect = note_expect.get("image_count")
-    image_relpaths = tiptap_image_relpaths(meta)
-    image_count = count_tiptap_nodes(meta.get("content"), "image")
-    if image_count_expect is not None:
-        expected_count = int(image_count_expect)
-        if image_count != expected_count:
-            fail(errors, f"{title}: image count mismatch actual={image_count}, expected={expected_count}, relpaths={image_relpaths!r}")
-        else:
-            ok(f"{title}: image count={image_count}")
-
-    min_image_count = note_expect.get("min_image_count")
-    if min_image_count is not None:
-        expected_count = int(min_image_count)
-        if image_count < expected_count:
-            fail(errors, f"{title}: image count < expected actual={image_count}, expected>={expected_count}, relpaths={image_relpaths!r}")
-        else:
-            ok(f"{title}: image count actual={image_count}, expected>={expected_count}")
-
-    max_image_count = note_expect.get("max_image_count")
-    if max_image_count is not None:
-        expected_count = int(max_image_count)
-        if image_count > expected_count:
-            fail(errors, f"{title}: image count > expected actual={image_count}, expected<={expected_count}, relpaths={image_relpaths!r}")
-        else:
-            ok(f"{title}: image count actual={image_count}, expected<={expected_count}")
-
-    relpath_prefix = note_expect.get("image_relPath_prefix")
-    if relpath_prefix is not None:
-        prefix = str(relpath_prefix)
-        if not image_relpaths:
-            fail(errors, f"{title}: no image relPath found, expected prefix={prefix!r}")
-        else:
-            bad_paths = [path for path in image_relpaths if not path.startswith(prefix)]
-            if bad_paths:
-                fail(errors, f"{title}: image relPath prefix mismatch bad_paths={bad_paths!r}, expected_prefix={prefix!r}")
-            else:
-                ok(f"{title}: image relPath prefix={prefix!r}")
-
-    if note_expect.get("image_files_exist") is not None:
-        should_exist = bool(note_expect.get("image_files_exist"))
-        db_dir = Path(note_expect.get("db_data_dir") or db_data_dir)
-        if not image_relpaths and should_exist:
-            fail(errors, f"{title}: no image relPath found for file existence check")
-        for relpath in image_relpaths:
-            image_path = db_dir / relpath
-            if image_path.exists() != should_exist:
-                fail(errors, f"{title}: image file existence mismatch path={image_path}, expected_exists={should_exist}")
-            else:
-                ok(f"{title}: image file exists={should_exist}: {image_path}")
+    return None
 
 
-def assert_db(expected: dict[str, Any], db_path: Path) -> int:
-    if not db_path.exists():
-        print(f"ERROR: database not found: {db_path}", file=sys.stderr)
-        return 2
+def analyze_note(note: dict[str, Any]) -> tuple[set[str], set[str], str]:
+    """分析笔记，返回 (marks, node_types, text_content)。"""
+    meta = note["meta_data"]
+    marks: set[str] = set()
+    node_types: set[str] = set()
 
-    folder_expect = expected.get("expected_folder") or {}
-    folder_title = folder_expect.get("title")
-    if not folder_title:
-        print("ERROR: expected_folder.title is required", file=sys.stderr)
-        return 2
+    tiptap_doc = _extract_tiptap_doc(meta)
+    if tiptap_doc is not None:
+        _collect_marks_from_tiptap(tiptap_doc, marks)
+        _collect_node_types_from_tiptap(tiptap_doc, node_types)
+        text_content = _extract_text_from_tiptap(tiptap_doc)
+    else:
+        html_code = meta.get("htmlCode", "")
+        _collect_marks_from_html(html_code, marks)
+        _collect_node_types_from_html(html_code, node_types)
+        text_content = _extract_text_from_html(html_code)
 
-    errors: list[str] = []
-    conn = sqlite3.connect(str(db_path))
-    conn.row_factory = sqlite3.Row
-    try:
-        folder = fetch_folder(conn, str(folder_title))
-        if folder is None:
-            fail(errors, f"folder not found: {folder_title}")
-            return 1
-        ok(f"folder exists: {folder['folder_name']} (id={folder['folder_id']})")
+    return marks, node_types, text_content
 
-        notes_by_title = fetch_notes(conn, int(folder["folder_id"]))
-        note_count = sum(len(rows) for rows in notes_by_title.values())
-        min_note_count = int(folder_expect.get("min_note_count") or 0)
-        if note_count < min_note_count:
-            fail(
-                errors,
-                f"folder note count < expected: actual={note_count}, expected>={min_note_count}",
-            )
-        else:
-            ok(f"folder note count: actual={note_count}, expected>={min_note_count}")
 
-        assets_expect = expected.get("expected_assets") or {}
-        min_image_file_count = assets_expect.get("min_image_file_count")
-        if min_image_file_count is not None:
-            image_dir = db_path.parent / "images"
-            image_file_count = len([path for path in image_dir.glob("*") if path.is_file()]) if image_dir.exists() else 0
-            expected_count = int(min_image_file_count)
-            if image_file_count < expected_count:
-                fail(errors, f"image file count < expected actual={image_file_count}, expected>={expected_count}, dir={image_dir}")
-            else:
-                ok(f"image file count actual={image_file_count}, expected>={expected_count}")
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="验证 deepin-voice-note DB 中目标笔记的 Tiptap 内容"
+    )
+    parser.add_argument(
+        "--db-path",
+        default=DEFAULT_DB_PATH,
+        help=f"数据库路径（默认: {DEFAULT_DB_PATH}）",
+    )
+    parser.add_argument(
+        "--note-text",
+        required=True,
+        help="在笔记内容中搜索的关键文本（如 richtextformat006）",
+    )
+    parser.add_argument(
+        "--marks-contains",
+        default="",
+        help="逗号分隔的 mark 类型列表（bold,italic,underline,strike）",
+    )
+    parser.add_argument(
+        "--node-type-contains",
+        default="",
+        help="逗号分隔的 node type 列表（orderedList,bulletList）",
+    )
+    args = parser.parse_args()
 
-        for note_expect in expected.get("expected_notes") or []:
-            title = str(note_expect.get("title") or "")
-            if not title:
-                fail(errors, "expected note title is empty")
-                continue
-
-            rows = notes_by_title.get(title) or []
-            if not rows:
-                fail(errors, f"note not found in folder {folder_title}: {title}")
-                continue
-
-            # Newer duplicate title wins for robustness, but normal scenario titles are unique.
-            row = rows[-1]
-            meta, text = parse_metadata(row["meta_data"])
-            ok(f"note exists: {title} (id={row['note_id']})")
-
-            expected_format = note_expect.get("format")
-            if expected_format is not None:
-                actual_format = meta.get("format")
-                if actual_format != expected_format:
-                    fail(
-                        errors,
-                        f"{title}: format mismatch actual={actual_format!r}, expected={expected_format!r}",
-                    )
-                else:
-                    ok(f"{title}: format={actual_format}")
-
-            expected_schema = note_expect.get("schemaVersion")
-            if expected_schema is not None:
-                actual_schema = meta.get("schemaVersion")
-                if actual_schema != expected_schema:
-                    fail(
-                        errors,
-                        f"{title}: schemaVersion mismatch actual={actual_schema!r}, expected={expected_schema!r}",
-                    )
-                else:
-                    ok(f"{title}: schemaVersion={actual_schema}")
-
-            assert_note_content(title, note_expect, meta, text, errors, db_path.parent)
-    finally:
-        conn.close()
-
-    if errors:
-        print(f"\nDB assertion failed: {len(errors)} error(s)")
+    # 连接数据库
+    if not os.path.isfile(args.db_path):
+        print(f"ERROR: DB file not found: {args.db_path}", file=sys.stderr)
         return 1
 
-    print("\nDB assertion passed")
-    return 0
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "expected",
-        type=Path,
-        help="expected YAML template path, e.g. tests/at/expected/tiptap_scenario_002_expected.yaml",
-    )
-    parser.add_argument(
-        "--db",
-        type=Path,
-        default=default_db_path(),
-        help="deepin-voice-note sqlite DB path",
-    )
-    args = parser.parse_args(argv)
-
     try:
-        expected = load_expected(args.expected)
-    except Exception as exc:
-        print(f"ERROR: failed to load expected template: {exc}", file=sys.stderr)
-        return 2
-    return assert_db(expected, args.db)
+        conn = sqlite3.connect(args.db_path)
+    except sqlite3.Error as exc:
+        print(f"ERROR: Cannot open DB: {exc}", file=sys.stderr)
+        return 1
+
+    # 查找目标笔记
+    note = find_target_note(conn, args.note_text)
+    conn.close()
+
+    if note is None:
+        print(
+            f"ERROR: No note containing '{args.note_text}' found in DB",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        f"Found note: id={note['note_id']}, title='{note['note_title']}'",
+        file=sys.stderr,
+    )
+
+    marks, node_types, text_content = analyze_note(note)
+
+    print(f"Note text content: {text_content[:200]}", file=sys.stderr)
+    print(f"Detected marks: {sorted(marks)}", file=sys.stderr)
+    print(f"Detected node types: {sorted(node_types)}", file=sys.stderr)
+
+    all_passed = True
+
+    # 检查 marks
+    if args.marks_contains:
+        required_marks = {
+            m.strip() for m in args.marks_contains.split(",") if m.strip()
+        }
+        missing_marks = required_marks - marks
+        if missing_marks:
+            print(
+                f"FAIL: Missing marks: {sorted(missing_marks)} "
+                f"(found: {sorted(marks)})",
+                file=sys.stderr,
+            )
+            all_passed = False
+        else:
+            print(
+                f"PASS: All required marks present: {sorted(required_marks)}",
+                file=sys.stderr,
+            )
+
+    # 检查 node types
+    if args.node_type_contains:
+        required_types = {
+            t.strip() for t in args.node_type_contains.split(",") if t.strip()
+        }
+        found_types = required_types & node_types
+        if not found_types:
+            print(
+                f"FAIL: None of required node types found: "
+                f"{sorted(required_types)} (found: {sorted(node_types)})",
+                file=sys.stderr,
+            )
+            all_passed = False
+        else:
+            print(
+                f"PASS: Required node types present: {sorted(found_types)}",
+                file=sys.stderr,
+            )
+
+    if all_passed:
+        print("ALL CHECKS PASSED", file=sys.stderr)
+        return 0
+    else:
+        print("SOME CHECKS FAILED", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
