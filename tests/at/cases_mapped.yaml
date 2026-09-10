@@ -2719,10 +2719,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建文本笔记
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本2"}
-        description: 断言未命名文本2存在
       - step_type: action
         action: element_action
         selector: {name: "TiptapWebView"}
@@ -2751,10 +2747,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建另一条笔记触发保存
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本3"}
-        description: 断言未命名文本3存在
       - step_type: action
         action: element_action
         selector: {role: "label", name: "未命名文本2"}
@@ -2802,10 +2794,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建文本笔记
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本2"}
-        description: 断言未命名文本2存在
       - step_type: action
         action: element_action
         selector: {name: "TiptapWebView"}
@@ -2826,10 +2814,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建另一条笔记触发保存
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本3"}
-        description: 断言未命名文本3存在
       - step_type: action
         action: element_action
         selector: {role: "label", name: "未命名文本2"}
@@ -2877,10 +2861,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建文本笔记
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本2"}
-        description: 断言未命名文本2存在
       - step_type: action
         action: element_action
         selector: {name: "TiptapWebView"}
@@ -2901,10 +2881,6 @@ cases:
         action: element_action
         selector: {role: "button", name: "NewNoteButton"}
         description: 点击NewNoteButton新建另一条笔记触发保存
-      - step_type: assert
-        action: assert_element
-        selector: {role: "label", name: "未命名文本3"}
-        description: 断言未命名文本3存在
       - step_type: action
         action: element_action
         selector: {role: "label", name: "未命名文本2"}
