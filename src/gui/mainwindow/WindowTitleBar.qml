@@ -22,6 +22,23 @@ TitleBar {
     property bool recordingHover: false
     property bool recordBtnEnabled: recordBtn.enabled
 
+    function logRecordButtonState(reason) {
+        console.log("VOICE_RECORD_QML_STATE", reason,
+                    "recordBtn.enabled:", recordBtn.enabled,
+                    "recorderBtnEnable:", recorderBtnEnable,
+                    "imageBtnEnable:", imageBtnEnable,
+                    "isPlaying:", isPlaying,
+                    "isSearching:", isSearching,
+                    "isInitialInterface:", isInitialInterface);
+    }
+
+    onRecorderBtnEnableChanged: logRecordButtonState("recorderBtnEnableChanged")
+    onImageBtnEnableChanged: logRecordButtonState("imageBtnEnableChanged")
+    onIsPlayingChanged: logRecordButtonState("isPlayingChanged")
+    onIsSearchingChanged: logRecordButtonState("isSearchingChanged")
+
+    Component.onCompleted: logRecordButtonState("titleBar.completed")
+
     signal createNote
     signal insertImage
     signal startRecording
@@ -109,7 +126,12 @@ TitleBar {
         height: 30
         width: 30
 
+        onEnabledChanged: {
+            titleBar.logRecordButtonState("recordBtn.enabledChanged");
+        }
+
         onClicked: {
+            titleBar.logRecordButtonState("recordBtn.clicked");
             startRecording();
             isRecording = true;
         }

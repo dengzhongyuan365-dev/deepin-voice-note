@@ -27,6 +27,21 @@ Item {
     property bool webVisible: true
     property alias titleBar: title
 
+    function logRecordButtonState(reason) {
+        console.log("VOICE_RECORD_QML_STATE", reason,
+                    "webVisible:", webVisible,
+                    "recorderBtnEnable:": title.recorderBtnEnable,
+                    "recordBtn.enabled:": title.recordBtnEnabled,
+                    "isRecordingAudio:": isRecordingAudio,
+                    "isVoiceToText:": isVoiceToText,
+                    "isPlaying:": title.isPlaying,
+                    "isSearching:": title.isSearching);
+    }
+
+    onWebVisibleChanged: logRecordButtonState("webVisibleChanged")
+    onIsRecordingAudioChanged: logRecordButtonState("isRecordingAudioChanged")
+    onIsVoiceToTextChanged: logRecordButtonState("isVoiceToTextChanged")
+
     Timer {
         id: txtMenuToolbarTimer
         interval: 50
@@ -248,6 +263,7 @@ Item {
         }
         isRecording = true;
         title.recorderBtnEnable = false;
+        logRecordButtonState("startRecording.afterDisable");
     }
 
     function stopAndClose() {
@@ -723,6 +739,7 @@ Item {
             }
         }
         onStartRecording: {
+            logRecordButtonState("onStartRecording.beforeHandler");
             VoiceRecoderHandler.startRecoder();
         }
     }
@@ -771,7 +788,9 @@ Item {
             }
         }
         onUpdateRecordBtnState: {
+            console.log("VOICE_RECORD_QML_STATE", "onUpdateRecordBtnState", "enable:", enable);
             title.recorderBtnEnable = enable;
+            logRecordButtonState("onUpdateRecordBtnState.afterApply");
         }
         onUpdateRecorderTime: {
             recorderViewLoader.item.time = time;

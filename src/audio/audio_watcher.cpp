@@ -17,6 +17,13 @@ AudioWatcher::AudioWatcher(QObject *parent)
         qWarning() << "Failed to get initial ReduceNoise state: m_audioDBusInterface is invalid.";
     }
 
+    qInfo() << "VOICE_RECORD_AUDIO_STATE initialized"
+            << "inputEnabled:" << m_inIsEnable
+            << "outputEnabled:" << m_outIsEnable
+            << "inputPorts:" << m_inAuidoPorts.size()
+            << "outputPorts:" << m_outAuidoPorts.size()
+            << "defaultSourcePath:" << m_defaultSourcePath
+            << "reduceNoise:" << m_isReduceNoise;
     qDebug() << "AudioWatcher initialization completed";
 }
 
@@ -112,6 +119,11 @@ void AudioWatcher::updateDeviceEnabled(const QString cardsStr, bool isEmitSig)
     QJsonArray cards = doc.array();
     if(cards.isEmpty()){
         qWarning() << "Current Audio Cards is Empty!!!!";
+        qWarning() << "VOICE_RECORD_AUDIO_STATE updateDeviceEnabled skipped"
+                    << "reason:emptyCards"
+                    << "previousInputEnabled:" << m_inIsEnable
+                    << "previousOutputEnabled:" << m_outIsEnable
+                    << "isEmitSig:" << isEmitSig;
         return;
     }else{
         qInfo() << "Current Audio Cards: "<< cards;
@@ -148,13 +160,27 @@ void AudioWatcher::updateDeviceEnabled(const QString cardsStr, bool isEmitSig)
     // m_inAuidoPorts 只保存 CardsWithoutUnavailable 中 Enabled=true 的输入端口，
     // 设备是否可用应直接以该列表为准，避免 ActivePort.availability 的 D-Bus 解析异常影响判断。
     m_inIsEnable = !m_inAuidoPorts.isEmpty();
-    if (isEmitSig && oldInIsEnable != m_inIsEnable)
+    if (isEmitSig && oldInIsEnable != m_inIsEnable) {
+        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
+                << "mode:" << Micphone << "enabled:" << m_inIsEnable;
         sigDeviceEnableChanged(Micphone, m_inIsEnable);
+    }
     m_outAudioPort = currentAuidoPort(m_outAuidoPorts,Internal);
     // m_outAuidoPorts 只保存 CardsWithoutUnavailable 中 Enabled=true 的输出端口。
     m_outIsEnable = !m_outAuidoPorts.isEmpty();
-    if (isEmitSig && oldOutIsEnable != m_outIsEnable)
+    if (isEmitSig && oldOutIsEnable != m_outIsEnable) {
+        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
+                << "mode:" << Internal << "enabled:" << m_outIsEnable;
         sigDeviceEnableChanged(Internal, m_outIsEnable);
+    }
+
+    qInfo() << "VOICE_RECORD_AUDIO_STATE"
+            << "inputPorts:" << m_inAuidoPorts.size()
+            << "outputPorts:" << m_outAuidoPorts.size()
+            << "inputEnabled:" << m_inIsEnable
+            << "outputEnabled:" << m_outIsEnable
+            << "defaultSourcePath:" << m_defaultSourcePath
+            << "reduceNoise:" << m_isReduceNoise;
 
     qInfo() << "Audio device status updated:"
             << "\nInput device:"
@@ -288,6 +314,8 @@ void AudioWatcher::onDBusAudioPropertyChanged(QDBusMessage msg)
                 if (m_isReduceNoise != newReduceNoiseState) {
                     m_isReduceNoise = newReduceNoiseState;
                     qInfo() << "ReduceNoise state changed to:" << m_isReduceNoise;
+                    qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigReduceNoiseChanged"
+                            << "reduceNoise:" << m_isReduceNoise;
                     emit sigReduceNoiseChanged(m_isReduceNoise);
                 }
             }
@@ -386,6 +414,10 @@ void AudioWatcher::onDefaultSourceChanaged(const QDBusObjectPath &defaultSourceP
                                                  );
         m_defaultSourcePath = defaultSourcePath.path();
         initDefaultSourceDBusInterface();
+        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
+                << "mode:" << Micphone
+                << "defaultSourcePath:" << m_defaultSourcePath
+                << "reduceNoise:" << m_isReduceNoise;
         emit sigDeviceChange(Micphone);
     }
     qInfo() << "Default audio input source changed finished";
@@ -432,6 +464,11 @@ void AudioWatcher::onDefaultSourceActivePortChanged(AudioPort value)
             << "\nPort Name:" << value.name
             << "\nPort Availability:" << value.availability;
     m_inAudioPort = value;
+    qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
+            << "mode:" << Micphone
+            << "reason:ActivePort"
+            << "port:" << value.name
+            << "availability:" << value.availability;
     emit sigDeviceChange(Micphone);
 }
 
@@ -472,6 +509,13 @@ QString AudioWatcher::getDeviceName(AudioMode mode)
             }
         }
     }
+    qInfo() << "VOICE_RECORD_AUDIO_STATE getDeviceName"
+            << "mode:" << mode
+            << "result:" << device
+            << "inputEnabled:" << m_inIsEnable
+            << "inputPortAvailability:" << m_inAudioPort.availability
+            << "defaultSourcePath:" << m_defaultSourcePath
+            << "reduceNoise:" << m_isReduceNoise;
     qInfo() << "Device name:" << device;
     return device;
 }
@@ -497,6 +541,13 @@ bool AudioWatcher::getDeviceEnable(AudioWatcher::AudioMode mode)
         return true;
     } else {
         bool hasDevice = (mode == Internal) ? m_outIsEnable : m_inIsEnable;
+        qInfo() << "VOICE_RECORD_AUDIO_STATE getDeviceEnable"
+                << "mode:" << mode
+                << "result:" << hasDevice
+                << "inputEnabled:" << m_inIsEnable
+                << "outputEnabled:" << m_outIsEnable
+                << "defaultSourcePath:" << m_defaultSourcePath
+                << "reduceNoise:" << m_isReduceNoise;
         qInfo() << "Device enable for mode" << mode << ":" << hasDevice;
         return hasDevice;
     }
@@ -509,6 +560,11 @@ bool AudioWatcher::hasAudioOutputDevice() const
 
 bool AudioWatcher::hasAudioInputDevice() const
 {
+    qInfo() << "VOICE_RECORD_AUDIO_STATE hasAudioInputDevice"
+            << "result:" << m_inIsEnable
+            << "inputEnabled:" << m_inIsEnable
+            << "defaultSourcePath:" << m_defaultSourcePath
+            << "reduceNoise:" << m_isReduceNoise;
     return m_inIsEnable;
 }
 

@@ -40,6 +40,9 @@ VoiceRecoderHandler::RecoderType VoiceRecoderHandler::getRecoderType()
 
 void VoiceRecoderHandler::startRecoder()
 {
+    qInfo() << "VOICE_RECORD_HANDLER startRecoder"
+            << "mode:" << m_currentMode
+            << "recorderType:" << m_type;
     qInfo() << "Starting voice recorder";
     if (VNoteMainManager::instance()->isInSearchMode()) {
         qDebug() << "Cannot start recording while in search mode";
@@ -98,8 +101,11 @@ void VoiceRecoderHandler::setAudioDevice(const QString &device)
 
 void VoiceRecoderHandler::changeMode(const int &mode)
 {
-    qInfo() << "Changing mode to:" << mode;
+    qInfo() << "Changing mode to:" << mode
+            << "previousMode:" << m_currentMode;
     m_currentMode = mode;
+    qInfo() << "VOICE_RECORD_HANDLER mode changed"
+            << "mode:" << m_currentMode;
     onAudioDeviceChange(m_currentMode);
     qInfo() << "Mode change finished";
 }
@@ -109,6 +115,9 @@ void VoiceRecoderHandler::onDeviceEnableChanged(int mode, bool enabled)
     qInfo() << "Device enable state changed, mode:" << mode << "enabled:" << enabled;
     if (m_currentMode == mode) {
         qInfo() << "mode is equal to current mode";
+        qInfo() << "VOICE_RECORD_HANDLER updateRecordBtnState"
+                << "source:onDeviceEnableChanged"
+                << "mode:" << mode << "enabled:" << enabled;
         emit updateRecordBtnState(enabled);
     }
     qInfo() << "Device enable state change handling finished";
@@ -141,6 +150,8 @@ void VoiceRecoderHandler::initAudioWatcher()
     m_audioWatcher = new AudioWatcher(this);
     connect(m_audioWatcher, &AudioWatcher::sigDeviceEnableChanged, this, &VoiceRecoderHandler::onDeviceEnableChanged);
     connect(m_audioWatcher, &AudioWatcher::sigReduceNoiseChanged, this, &VoiceRecoderHandler::onReduceNoiseChanged);
+    qInfo() << "VOICE_RECORD_HANDLER audio watcher signals connected"
+            << "sigDeviceChangeConnected:" << false;
     qInfo() << "Audio watcher initialization finished";
 }
 
@@ -231,8 +242,13 @@ QString VoiceRecoderHandler::getDefaultMicDeviceName() const
 
 void VoiceRecoderHandler::confirmStartRecoder()
 {
+    qInfo() << "VOICE_RECORD_HANDLER confirmStartRecoder"
+            << "mode:" << m_currentMode;
     qDebug() << "Confirming start of recording";
-    m_audioRecoder->setDevice(getDefaultMicDeviceName());
+    const QString deviceName = getDefaultMicDeviceName();
+    qInfo() << "VOICE_RECORD_HANDLER selected microphone:" << deviceName
+            << "mode:" << m_currentMode;
+    m_audioRecoder->setDevice(deviceName);
     // 将文件名控制更加精细，避免文件名冲突
     QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmsszzz") + ".mp3";
 
@@ -267,21 +283,33 @@ void VoiceRecoderHandler::onAudioDeviceChange(int mode)
         QString info = m_audioWatcher->getDeviceName(
             static_cast<AudioWatcher::AudioMode>(mode));
         qInfo() << "Current audio device:" << info;
+        qInfo() << "VOICE_RECORD_HANDLER audio device decision"
+                << "mode:" << mode
+                << "deviceName:" << info
+                << "deviceEnabled:" << (!info.isEmpty());
         
         if (info.isEmpty()) {
             qWarning() << "No audio device available";
             stopRecoder();
+            qInfo() << "VOICE_RECORD_HANDLER updateRecordBtnState"
+                    << "source:onAudioDeviceChange" << "enabled:" << false;
             updateRecordBtnState(false);
             updateWave(0.0);
         } else {
             bool isEnable = m_audioWatcher->getDeviceEnable(static_cast<AudioWatcher::AudioMode>(m_currentMode));
             qDebug() << "Device enabled state:" << isEnable;
+            qInfo() << "VOICE_RECORD_HANDLER audio device decision"
+                    << "mode:" << mode
+                    << "deviceName:" << info
+                    << "deviceEnabled:" << isEnable;
             
             // 如果正在录音，需要完全停止录音并通知UI关闭界面
             if (m_type != RecoderType::Idle) {
                 stopRecoder();
                 emit recoderStateChange(RecoderType::Idle);
             }
+            qInfo() << "VOICE_RECORD_HANDLER updateRecordBtnState"
+                    << "source:onAudioDeviceChange" << "enabled:" << isEnable;
             updateRecordBtnState(isEnable);
             // 此时停止也需要将波形曲线归零，否则可能会在停止录制之后，波形曲线依然显示
             updateWave(0.0);
@@ -330,9 +358,15 @@ void VoiceRecoderHandler::onReduceNoiseChanged(bool reduceNoiseChanged)
         updateWave(0.0);
     }
 
-    QTimer::singleShot(200, this, [this]() {
+    QTimer::singleShot(200, this, [this, reduceNoiseChanged]() {
         QString deviceName = m_audioWatcher->getDeviceName(static_cast<AudioWatcher::AudioMode>(m_currentMode));
-        updateRecordBtnState(!deviceName.isEmpty());
+        const bool enabled = !deviceName.isEmpty();
+        qInfo() << "VOICE_RECORD_HANDLER updateRecordBtnState"
+                << "source:onReduceNoiseChanged"
+                << "reduceNoise:" << reduceNoiseChanged
+                << "deviceName:" << deviceName
+                << "enabled:" << enabled;
+        updateRecordBtnState(enabled);
     });
 }
 
