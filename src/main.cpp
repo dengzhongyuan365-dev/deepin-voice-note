@@ -93,6 +93,11 @@ int main(int argc, char *argv[])
     app->setOrganizationName("deepin");
     app->setApplicationName("deepin-voice-note");
     app->setApplicationVersion(VERSION);
+
+    // Register logging before QML loads singleton objects that initialize audio watchers.
+    DLogManager::registerConsoleAppender();
+    DLogManager::registerFileAppender();
+    qInfo() << "Log system initialized";
     qInfo() << "Application initialized with version:" << VERSION;
 
 #ifndef NDEBUG
@@ -123,10 +128,6 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
     engine.load(url);
     qInfo() << "QML engine loaded successfully";
-
-    DLogManager::registerConsoleAppender();
-    DLogManager::registerFileAppender();
-    qInfo() << "Log system initialized";
 
     return app->exec();
 }

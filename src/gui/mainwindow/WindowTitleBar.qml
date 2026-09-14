@@ -23,19 +23,28 @@ TitleBar {
     property bool recordBtnEnabled: recordBtn.enabled
 
     function logRecordButtonState(reason) {
-        console.log("VOICE_RECORD_QML_STATE", reason,
+        var expectedEnabled = recorderBtnEnable && imageBtnEnable && !isPlaying && !isSearching;
+        console.warn("VOICE_RECORD_QML_STATE", reason,
                     "recordBtn.enabled:", recordBtn.enabled,
+                    "expectedEnabled:", expectedEnabled,
                     "recorderBtnEnable:", recorderBtnEnable,
                     "imageBtnEnable:", imageBtnEnable,
                     "isPlaying:", isPlaying,
                     "isSearching:", isSearching,
-                    "isInitialInterface:", isInitialInterface);
+                    "isInitialInterface:", isInitialInterface,
+                    "isRecording:", isRecording,
+                    "isRecordingAudio:", isRecordingAudio,
+                    "isVoiceToText:", isVoiceToText);
     }
 
     onRecorderBtnEnableChanged: logRecordButtonState("recorderBtnEnableChanged")
     onImageBtnEnableChanged: logRecordButtonState("imageBtnEnableChanged")
     onIsPlayingChanged: logRecordButtonState("isPlayingChanged")
     onIsSearchingChanged: logRecordButtonState("isSearchingChanged")
+    onIsInitialInterfaceChanged: logRecordButtonState("isInitialInterfaceChanged")
+    onIsRecordingChanged: logRecordButtonState("isRecordingChanged")
+    onIsRecordingAudioChanged: logRecordButtonState("isRecordingAudioChanged")
+    onIsVoiceToTextChanged: logRecordButtonState("isVoiceToTextChanged")
 
     Component.onCompleted: logRecordButtonState("titleBar.completed")
 

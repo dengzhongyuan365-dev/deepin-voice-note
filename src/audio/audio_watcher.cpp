@@ -17,7 +17,7 @@ AudioWatcher::AudioWatcher(QObject *parent)
         qWarning() << "Failed to get initial ReduceNoise state: m_audioDBusInterface is invalid.";
     }
 
-    qInfo() << "VOICE_RECORD_AUDIO_STATE initialized"
+    qWarning() << "VOICE_RECORD_AUDIO_STATE initialized"
             << "inputEnabled:" << m_inIsEnable
             << "outputEnabled:" << m_outIsEnable
             << "inputPorts:" << m_inAuidoPorts.size()
@@ -40,8 +40,12 @@ void AudioWatcher::initDeviceWacther()
     if (m_audioDBusInterface->isValid()) {
         qInfo() << "m_audioDBusInterface is valid";
         m_defaultSourcePath = m_audioDBusInterface->property("DefaultSource").value<QDBusObjectPath>().path();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_DEFAULT_SOURCE"
+                   << "path:" << m_defaultSourcePath;
         initDefaultSourceDBusInterface();
         m_defaultSinkPath = m_audioDBusInterface->property("DefaultSink").value<QDBusObjectPath>().path();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_DEFAULT_SINK"
+                   << "path:" << m_defaultSinkPath;
         initDefaultSinkDBusInterface();
         qInfo() << "\n**************** cunrrent default input or output active port **********************"
                 << "\ncurrent input active port name:" << m_inAudioPort.name
@@ -51,15 +55,31 @@ void AudioWatcher::initDeviceWacther()
                 << "\ncurrent output active port availability(0 for Unknown, 1 for Not Available, 2 for Available.):" << m_outAudioPort.availability
                 << "\ncurrent output device name:" << defaultSinkName()
                 << "\n***********************************************************************************";
-        QDBusConnection::sessionBus().connect(AudioService,
-                                              AudioPath,
-                                              PropertiesInterface,
-                                              "PropertiesChanged",
-                                              "sa{sv}as",
-                                              this,
-                                              SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                              );
-        updateDeviceEnabled(m_audioDBusInterface->property("CardsWithoutUnavailable").value<QString>(), false);
+        const bool propertyConnection = QDBusConnection::sessionBus().connect(
+            AudioService,
+            AudioPath,
+            PropertiesInterface,
+            "PropertiesChanged",
+            "sa{sv}as",
+            this,
+            SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_CONNECTION"
+                   << "source:Audio1"
+                   << "service:" << AudioService
+                   << "path:" << AudioPath
+                   << "interface:" << PropertiesInterface
+                   << "connected:" << propertyConnection
+                   << "busConnected:" << QDBusConnection::sessionBus().isConnected();
+
+        const QString cardsWithoutUnavailable =
+            m_audioDBusInterface->property("CardsWithoutUnavailable").value<QString>();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_INITIAL_STATE"
+                   << "defaultSource:" << m_defaultSourcePath
+                   << "defaultSink:" << m_defaultSinkPath
+                   << "reduceNoise:" << m_audioDBusInterface->property("ReduceNoise")
+                   << "cardsLength:" << cardsWithoutUnavailable.size()
+                   << "cardsValue:" << cardsWithoutUnavailable;
+        updateDeviceEnabled(cardsWithoutUnavailable, false);
     } else {
         qCritical() << "Failed to initialize audio service. Audio service (" << AudioService << ") does not exist";
     }
@@ -70,14 +90,21 @@ void AudioWatcher::initDeviceWacther()
  */
 void AudioWatcher::initConnections()
 {
-    QDBusConnection::sessionBus().connect(AudioService,
-                                          AudioPath,
-                                          PropertiesInterface,
-                                          "PropertiesChanged",
-                                          "sa{sv}as",
-                                          this,
-                                          SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                          );
+    const bool propertyConnection = QDBusConnection::sessionBus().connect(
+        AudioService,
+        AudioPath,
+        PropertiesInterface,
+        "PropertiesChanged",
+        "sa{sv}as",
+        this,
+        SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+    qWarning() << "VOICE_RECORD_AUDIO_DBUS_CONNECTION"
+               << "source:initConnections"
+               << "service:" << AudioService
+               << "path:" << AudioPath
+               << "interface:" << PropertiesInterface
+               << "connected:" << propertyConnection
+               << "busConnected:" << QDBusConnection::sessionBus().isConnected();
 
 }
 
@@ -115,8 +142,14 @@ QString AudioWatcher::vnSystemInfo()
 void AudioWatcher::updateDeviceEnabled(const QString cardsStr, bool isEmitSig)
 {
     qInfo() << "Updating audio device status";
-    QJsonDocument doc = QJsonDocument::fromJson(cardsStr.toUtf8());
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(cardsStr.toUtf8(), &parseError);
     QJsonArray cards = doc.array();
+    qWarning() << "VOICE_RECORD_AUDIO_STATE updateDeviceEnabled"
+               << "cardsLength:" << cardsStr.size()
+               << "isEmitSig:" << isEmitSig
+               << "parseError:" << parseError.errorString()
+               << "cardCount:" << cards.size();
     if(cards.isEmpty()){
         qWarning() << "Current Audio Cards is Empty!!!!";
         qWarning() << "VOICE_RECORD_AUDIO_STATE updateDeviceEnabled skipped"
@@ -144,6 +177,13 @@ void AudioWatcher::updateDeviceEnabled(const QString cardsStr, bool isEmitSig)
                 isEnable = port.toObject()["Enabled"].toBool();
             }
             audioPort.availability = isEnable? 2:1;
+            const int direction = port.toObject().value("Direction").toInt();
+            qWarning() << "VOICE_RECORD_AUDIO_PORT"
+                        << "card:" << card.toObject().value("Name").toString()
+                        << "name:" << portName
+                        << "direction:" << direction
+                        << "enabled:" << isEnable
+                        << "description:" << audioPort.description;
             if(port.toObject().contains("Direction")){
                 if(port.toObject()["Direction"].toInt() == 1 && isEnable){
                     m_outAuidoPorts.append(audioPort);
@@ -160,21 +200,41 @@ void AudioWatcher::updateDeviceEnabled(const QString cardsStr, bool isEmitSig)
     // m_inAuidoPorts 只保存 CardsWithoutUnavailable 中 Enabled=true 的输入端口，
     // 设备是否可用应直接以该列表为准，避免 ActivePort.availability 的 D-Bus 解析异常影响判断。
     m_inIsEnable = !m_inAuidoPorts.isEmpty();
+    qWarning() << "VOICE_RECORD_AUDIO_STATE inputEnabledTransition"
+               << "old:" << oldInIsEnable
+               << "new:" << m_inIsEnable
+               << "isEmitSig:" << isEmitSig;
     if (isEmitSig && oldInIsEnable != m_inIsEnable) {
-        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
+        qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
                 << "mode:" << Micphone << "enabled:" << m_inIsEnable;
         sigDeviceEnableChanged(Micphone, m_inIsEnable);
+    } else {
+        qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged skipped"
+                   << "mode:" << Micphone
+                   << "old:" << oldInIsEnable
+                   << "new:" << m_inIsEnable
+                   << "isEmitSig:" << isEmitSig;
     }
     m_outAudioPort = currentAuidoPort(m_outAuidoPorts,Internal);
     // m_outAuidoPorts 只保存 CardsWithoutUnavailable 中 Enabled=true 的输出端口。
     m_outIsEnable = !m_outAuidoPorts.isEmpty();
+    qWarning() << "VOICE_RECORD_AUDIO_STATE outputEnabledTransition"
+               << "old:" << oldOutIsEnable
+               << "new:" << m_outIsEnable
+               << "isEmitSig:" << isEmitSig;
     if (isEmitSig && oldOutIsEnable != m_outIsEnable) {
-        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
+        qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged"
                 << "mode:" << Internal << "enabled:" << m_outIsEnable;
         sigDeviceEnableChanged(Internal, m_outIsEnable);
+    } else {
+        qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceEnableChanged skipped"
+                   << "mode:" << Internal
+                   << "old:" << oldOutIsEnable
+                   << "new:" << m_outIsEnable
+                   << "isEmitSig:" << isEmitSig;
     }
 
-    qInfo() << "VOICE_RECORD_AUDIO_STATE"
+    qWarning() << "VOICE_RECORD_AUDIO_STATE"
             << "inputPorts:" << m_inAuidoPorts.size()
             << "outputPorts:" << m_outAuidoPorts.size()
             << "inputEnabled:" << m_inIsEnable
@@ -236,14 +296,20 @@ void AudioWatcher::initDefaultSourceDBusInterface()
         m_inAudioPortVolume = defaultSourceVolume();
         m_inAudioPort = defaultSourceActivePort();
         m_inAudioMute = defaultSourceMute();
-        QDBusConnection::sessionBus().connect(AudioService,
-                                              m_defaultSourcePath,
-                                              PropertiesInterface,
-                                              "PropertiesChanged",
-                                              "sa{sv}as",
-                                              this,
-                                              SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                              );
+        const bool propertyConnection = QDBusConnection::sessionBus().connect(
+            AudioService,
+            m_defaultSourcePath,
+            PropertiesInterface,
+            "PropertiesChanged",
+            "sa{sv}as",
+            this,
+            SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_CONNECTION"
+                   << "source:defaultSource"
+                   << "path:" << m_defaultSourcePath
+                   << "interface:" << SourceInterface
+                   << "connected:" << propertyConnection
+                   << "busConnected:" << QDBusConnection::sessionBus().isConnected();
     } else {
         qWarning() << "Default audio input source initialization failed！By default, the source address is entered (" << m_defaultSourcePath << ") does not exist";
     }
@@ -268,14 +334,20 @@ void AudioWatcher::initDefaultSinkDBusInterface()
         m_outAudioPort = defaultSinkActivePort();
         m_outAudioMute = defaultSinkMute();
 
-        QDBusConnection::sessionBus().connect(AudioService,
-                                              m_defaultSinkPath,
-                                              PropertiesInterface,
-                                              "PropertiesChanged",
-                                              "sa{sv}as",
-                                              this,
-                                              SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                              );
+        const bool propertyConnection = QDBusConnection::sessionBus().connect(
+            AudioService,
+            m_defaultSinkPath,
+            PropertiesInterface,
+            "PropertiesChanged",
+            "sa{sv}as",
+            this,
+            SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_CONNECTION"
+                   << "source:defaultSink"
+                   << "path:" << m_defaultSinkPath
+                   << "interface:" << SinkInterface
+                   << "connected:" << propertyConnection
+                   << "busConnected:" << QDBusConnection::sessionBus().isConnected();
     } else {
         qWarning() << "Default audio output source initialization failed！The default output source address (" << m_defaultSinkPath << ") does not exist";
     }
@@ -285,19 +357,36 @@ void AudioWatcher::initDefaultSinkDBusInterface()
 void AudioWatcher::onDBusAudioPropertyChanged(QDBusMessage msg)
 {
     qInfo() << "Audio property changed";
-    QList<QVariant> arguments = msg.arguments();
+    const QList<QVariant> arguments = msg.arguments();
+    qWarning() << "VOICE_RECORD_AUDIO_DBUS_EVENT"
+                << "path:" << msg.path()
+                << "interface:" << msg.interface()
+                << "member:" << msg.member()
+                << "signature:" << msg.signature()
+                << "argumentCount:" << arguments.count();
     if (3 != arguments.count()) {
-        qWarning() << "Invalid DBus message received: incorrect argument count";
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_EVENT_INVALID"
+                   << "reason:incorrectArgumentCount"
+                   << "argumentCount:" << arguments.count();
         return;
     }
-    QString interfaceName = msg.arguments().at(0).toString();
+    const QString interfaceName = msg.arguments().at(0).toString();
+    qWarning() << "VOICE_RECORD_AUDIO_DBUS_EVENT_INTERFACE"
+                << "changedInterface:" << interfaceName;
     qInfo() << "Audio property changed on interface:" << interfaceName;
     
     if (interfaceName == AudioInterface) {
         qInfo() << "Audio property changed on interface:" << interfaceName;
         QVariantMap changedProps = qdbus_cast<QVariantMap>(arguments.at(1).value<QDBusArgument>());
         QStringList keys =  changedProps.keys();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTIES"
+                    << "path:" << msg.path()
+                    << "interface:" << interfaceName
+                    << "keys:" << keys;
         foreach (const QString &prop, keys) {
+            qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTY"
+                        << "name:" << prop
+                        << "value:" << changedProps.value(prop);
             if (prop == QStringLiteral("DefaultSource")) {
                 const QDBusObjectPath &defaultSourcePath = qvariant_cast<QDBusObjectPath>(changedProps[prop]);
                 qDebug() << "Default audio source changed to:" << defaultSourcePath.path();
@@ -307,16 +396,25 @@ void AudioWatcher::onDBusAudioPropertyChanged(QDBusMessage msg)
                 qDebug() << "Default audio sink changed to:" << defaultSinkePath.path();
                 onDefaultSinkChanaged(defaultSinkePath);
             }else if (prop == "CardsWithoutUnavailable") {
+                qWarning() << "VOICE_RECORD_AUDIO_DBUS_CARDS"
+                            << "length:" << changedProps[prop].toString().size()
+                            << "value:" << changedProps[prop].toString();
                 qDebug() << "Audio cards configuration changed";
                 updateDeviceEnabled(changedProps[prop].toString(), true);
             } else if (prop == QStringLiteral("ReduceNoise")) {
                 bool newReduceNoiseState = qvariant_cast<bool>(changedProps[prop]);
                 if (m_isReduceNoise != newReduceNoiseState) {
+                    const bool oldReduceNoiseState = m_isReduceNoise;
                     m_isReduceNoise = newReduceNoiseState;
                     qInfo() << "ReduceNoise state changed to:" << m_isReduceNoise;
-                    qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigReduceNoiseChanged"
+                    qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigReduceNoiseChanged"
+                            << "old:" << oldReduceNoiseState
                             << "reduceNoise:" << m_isReduceNoise;
                     emit sigReduceNoiseChanged(m_isReduceNoise);
+                } else {
+                    qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigReduceNoiseChanged skipped"
+                               << "reason:sameValue"
+                               << "reduceNoise:" << newReduceNoiseState;
                 }
             }
         }
@@ -324,7 +422,15 @@ void AudioWatcher::onDBusAudioPropertyChanged(QDBusMessage msg)
         qInfo() << "Audio property changed on interface:" << interfaceName;
         QVariantMap changedProps = qdbus_cast<QVariantMap>(arguments.at(1).value<QDBusArgument>());
         QStringList keys =  changedProps.keys();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTIES"
+                    << "path:" << msg.path()
+                    << "interface:" << interfaceName
+                    << "keys:" << keys;
         foreach (const QString &prop, keys) {
+            qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTY"
+                        << "interface:" << interfaceName
+                        << "name:" << prop
+                        << "value:" << changedProps.value(prop);
             qInfo() << "property: " << prop << changedProps[prop];
             if (prop == QStringLiteral("Volume")) {
                 double inAudioPortVolume = qvariant_cast<double>(changedProps[prop]);
@@ -347,7 +453,15 @@ void AudioWatcher::onDBusAudioPropertyChanged(QDBusMessage msg)
         qInfo() << "Audio property changed on interface:" << interfaceName;
         QVariantMap changedProps = qdbus_cast<QVariantMap>(arguments.at(1).value<QDBusArgument>());
         QStringList keys =  changedProps.keys();
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTIES"
+                    << "path:" << msg.path()
+                    << "interface:" << interfaceName
+                    << "keys:" << keys;
         foreach (const QString &prop, keys) {
+            qWarning() << "VOICE_RECORD_AUDIO_DBUS_PROPERTY"
+                        << "interface:" << interfaceName
+                        << "name:" << prop
+                        << "value:" << changedProps.value(prop);
             if (prop == QStringLiteral("Volume")) {
                 double outAudioPortVolume = qvariant_cast<double>(changedProps[prop]);
                 if (abs(m_outAudioPortVolume - outAudioPortVolume) >= 0.000001) {
@@ -401,20 +515,27 @@ void AudioWatcher::onSinkVolumeChanged(double value)
 
 void AudioWatcher::onDefaultSourceChanaged(const QDBusObjectPath &defaultSourcePath)
 {
+    qWarning() << "VOICE_RECORD_AUDIO_CALLBACK defaultSourceChanged"
+               << "oldPath:" << m_defaultSourcePath
+               << "newPath:" << defaultSourcePath.path();
     qInfo() << "Default audio input source changed to:" << defaultSourcePath.path();
     if (m_defaultSourcePath != defaultSourcePath.path()) {
         qInfo() << "default source path is not the same";
-        QDBusConnection::sessionBus().disconnect(AudioService,
-                                                 m_defaultSourcePath,
-                                                 PropertiesInterface,
-                                                 "PropertiesChanged",
-                                                 "sa{sv}as",
-                                                 this,
-                                                 SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                                 );
+        const bool disconnected = QDBusConnection::sessionBus().disconnect(
+            AudioService,
+            m_defaultSourcePath,
+            PropertiesInterface,
+            "PropertiesChanged",
+            "sa{sv}as",
+            this,
+            SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_DISCONNECT"
+                   << "source:defaultSource"
+                   << "path:" << m_defaultSourcePath
+                   << "disconnected:" << disconnected;
         m_defaultSourcePath = defaultSourcePath.path();
         initDefaultSourceDBusInterface();
-        qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
+        qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
                 << "mode:" << Micphone
                 << "defaultSourcePath:" << m_defaultSourcePath
                 << "reduceNoise:" << m_isReduceNoise;
@@ -425,17 +546,24 @@ void AudioWatcher::onDefaultSourceChanaged(const QDBusObjectPath &defaultSourceP
 
 void AudioWatcher::onDefaultSinkChanaged(const QDBusObjectPath &defaultSinkePath)
 {
+    qWarning() << "VOICE_RECORD_AUDIO_CALLBACK defaultSinkChanged"
+               << "oldPath:" << m_defaultSinkPath
+               << "newPath:" << defaultSinkePath.path();
     qInfo() << "Default audio output source changed to:" << defaultSinkePath.path();
     if (m_defaultSinkPath != defaultSinkePath.path()) {
         qInfo() << "default sink path is not the same";
-        QDBusConnection::sessionBus().disconnect(AudioService,
-                                                 m_defaultSinkPath,
-                                                 PropertiesInterface,
-                                                 "PropertiesChanged",
-                                                 "sa{sv}as",
-                                                 this,
-                                                 SLOT(onDBusAudioPropertyChanged(QDBusMessage))
-                                                 );
+        const bool disconnected = QDBusConnection::sessionBus().disconnect(
+            AudioService,
+            m_defaultSinkPath,
+            PropertiesInterface,
+            "PropertiesChanged",
+            "sa{sv}as",
+            this,
+            SLOT(onDBusAudioPropertyChanged(QDBusMessage)));
+        qWarning() << "VOICE_RECORD_AUDIO_DBUS_DISCONNECT"
+                   << "source:defaultSink"
+                   << "path:" << m_defaultSinkPath
+                   << "disconnected:" << disconnected;
         m_defaultSinkPath = defaultSinkePath.path();
         initDefaultSinkDBusInterface();
         emit sigDeviceChange(Internal);
@@ -452,6 +580,11 @@ void AudioWatcher::onDefaultSinkActivePortChanged(AudioPort value)
             << "\nPort Name:" << value.name
             << "\nPort Availability:" << value.availability;
     m_outAudioPort = value;
+    qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
+               << "mode:" << Internal
+               << "reason:ActivePort"
+               << "port:" << value.name
+               << "availability:" << value.availability;
     emit sigDeviceChange(Internal);
 }
 
@@ -464,7 +597,7 @@ void AudioWatcher::onDefaultSourceActivePortChanged(AudioPort value)
             << "\nPort Name:" << value.name
             << "\nPort Availability:" << value.availability;
     m_inAudioPort = value;
-    qInfo() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
+    qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigDeviceChange"
             << "mode:" << Micphone
             << "reason:ActivePort"
             << "port:" << value.name
@@ -483,6 +616,7 @@ void AudioWatcher::onSourceMuteChanged(bool value)
 {
     qDebug() << "Input device mute state changed to:" << value;
     m_inAudioMute = value;
+    qWarning() << "VOICE_RECORD_AUDIO_SIGNAL sigMuteChanged" << "mode:" << Micphone << "value:" << value;
     emit sigMuteChanged(Micphone);
 }
 
@@ -509,12 +643,19 @@ QString AudioWatcher::getDeviceName(AudioMode mode)
             }
         }
     }
-    qInfo() << "VOICE_RECORD_AUDIO_STATE getDeviceName"
+    qWarning() << "VOICE_RECORD_AUDIO_STATE getDeviceName"
             << "mode:" << mode
             << "result:" << device
             << "inputEnabled:" << m_inIsEnable
+            << "outputEnabled:" << m_outIsEnable
+            << "inputPort:" << m_inAudioPort.name
             << "inputPortAvailability:" << m_inAudioPort.availability
+            << "outputPort:" << m_outAudioPort.name
+            << "outputPortAvailability:" << m_outAudioPort.availability
+            << "needDeviceChecker:" << m_fNeedDeviceChecker
+            << "virtualMachine:" << m_isVirtualMachineHw
             << "defaultSourcePath:" << m_defaultSourcePath
+            << "defaultSinkPath:" << m_defaultSinkPath
             << "reduceNoise:" << m_isReduceNoise;
     qInfo() << "Device name:" << device;
     return device;
@@ -537,11 +678,17 @@ bool AudioWatcher::getDeviceEnable(AudioWatcher::AudioMode mode)
     qInfo() << "Getting device enable";
     QString cards = m_audioDBusInterface->property("Cards").value<QString>();
     if (m_isVirtualMachineHw && (cards.isEmpty() || cards.toLower() == "null")) {
+        qWarning() << "VOICE_RECORD_AUDIO_STATE getDeviceEnable"
+                   << "mode:" << mode
+                   << "result:" << true
+                   << "reason:virtualMachineWithoutCards"
+                   << "cardsLength:" << cards.size()
+                   << "reduceNoise:" << m_isReduceNoise;
         qInfo() << "Device enable is true (virtual machine)";
         return true;
     } else {
         bool hasDevice = (mode == Internal) ? m_outIsEnable : m_inIsEnable;
-        qInfo() << "VOICE_RECORD_AUDIO_STATE getDeviceEnable"
+        qWarning() << "VOICE_RECORD_AUDIO_STATE getDeviceEnable"
                 << "mode:" << mode
                 << "result:" << hasDevice
                 << "inputEnabled:" << m_inIsEnable
@@ -560,7 +707,7 @@ bool AudioWatcher::hasAudioOutputDevice() const
 
 bool AudioWatcher::hasAudioInputDevice() const
 {
-    qInfo() << "VOICE_RECORD_AUDIO_STATE hasAudioInputDevice"
+    qWarning() << "VOICE_RECORD_AUDIO_STATE hasAudioInputDevice"
             << "result:" << m_inIsEnable
             << "inputEnabled:" << m_inIsEnable
             << "defaultSourcePath:" << m_defaultSourcePath

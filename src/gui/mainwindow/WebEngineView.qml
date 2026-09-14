@@ -28,19 +28,26 @@ Item {
     property alias titleBar: title
 
     function logRecordButtonState(reason) {
-        console.log("VOICE_RECORD_QML_STATE", reason,
+        console.warn("VOICE_RECORD_QML_STATE", reason,
                     "webVisible:", webVisible,
-                    "recorderBtnEnable:": title.recorderBtnEnable,
-                    "recordBtn.enabled:": title.recordBtnEnabled,
-                    "isRecordingAudio:": isRecordingAudio,
-                    "isVoiceToText:": isVoiceToText,
-                    "isPlaying:": title.isPlaying,
-                    "isSearching:": title.isSearching);
+                    "initialVisible:", initialVisible,
+                    "recorderBtnEnable:", title.recorderBtnEnable,
+                    "recordBtn.enabled:", title.recordBtnEnabled,
+                    "isRecording:", isRecording,
+                    "isRecordingAudio:", isRecordingAudio,
+                    "isVoiceToText:", isVoiceToText,
+                    "isInitialInterface:", title.isInitialInterface,
+                    "isPlaying:", title.isPlaying,
+                    "isSearching:", title.isSearching);
     }
 
     onWebVisibleChanged: logRecordButtonState("webVisibleChanged")
     onIsRecordingAudioChanged: logRecordButtonState("isRecordingAudioChanged")
     onIsVoiceToTextChanged: logRecordButtonState("isVoiceToTextChanged")
+    onInitialVisibleChanged: logRecordButtonState("initialVisibleChanged")
+    onIsRecordingChanged: logRecordButtonState("isRecordingChanged")
+
+    Component.onCompleted: logRecordButtonState("webEngineView.completed")
 
     Timer {
         id: txtMenuToolbarTimer
@@ -251,8 +258,13 @@ Item {
     }
 
     function startRecording() {
-        if (VNoteMainManager.isInSearchMode()) {
-            console.log("Cannot show recording UI while in search mode");
+        var inSearchMode = VNoteMainManager.isInSearchMode();
+        console.warn("VOICE_RECORD_QML_STATE", "startRecording.enter",
+                    "inSearchMode:", inSearchMode,
+                    "recordBtn.enabled:", title.recordBtnEnabled,
+                    "recorderBtnEnable:", title.recorderBtnEnable);
+        if (inSearchMode) {
+            console.warn("VOICE_RECORD_QML_STATE", "startRecording.rejected.searchMode");
             return;
         }
         
@@ -765,6 +777,7 @@ Item {
         target: VoiceRecoderHandler
 
         onRecoderStateChange: {
+            console.warn("VOICE_RECORD_QML_STATE", "onRecoderStateChange", "type:", type);
             var currentType = VoiceRecoderHandler.getRecoderType();
             if (recorderViewLoader.item) {
                 recorderViewLoader.item.isRecording = (currentType === VoiceRecoderHandler.Recording);
@@ -775,6 +788,7 @@ Item {
                 isRecording = false;
                 title.recorderBtnEnable = true;
                 title.isRecording = false;
+                logRecordButtonState("onRecoderStateChange.idle.afterApply");
                 
                 // 完全关闭录音界面
                 if (recorderViewLoader.active && recorderViewLoader.item) {
@@ -788,7 +802,7 @@ Item {
             }
         }
         onUpdateRecordBtnState: {
-            console.log("VOICE_RECORD_QML_STATE", "onUpdateRecordBtnState", "enable:", enable);
+            console.warn("VOICE_RECORD_QML_STATE", "onUpdateRecordBtnState", "enable:", enable);
             title.recorderBtnEnable = enable;
             logRecordButtonState("onUpdateRecordBtnState.afterApply");
         }
