@@ -403,14 +403,15 @@ void VoiceRecoderHandler::onReduceNoiseChanged(bool reduceNoiseChanged)
     }
 
     QTimer::singleShot(200, this, [this, reduceNoiseChanged]() {
-        QString deviceName = m_audioWatcher->getDeviceName(static_cast<AudioWatcher::AudioMode>(m_currentMode));
-        const bool enabled = !deviceName.isEmpty();
+        const AudioWatcher::AudioMode mode = static_cast<AudioWatcher::AudioMode>(m_currentMode);
+        QString deviceName = m_audioWatcher->getDeviceName(mode);
+        const bool enabled = m_audioWatcher->getDeviceEnable(mode);
         qWarning() << "VOICE_RECORD_HANDLER reduce noise delayed evaluation"
                    << "reduceNoise:" << reduceNoiseChanged
                    << "mode:" << m_currentMode
                    << "recorderType:" << m_type
                    << "deviceName:" << deviceName
-                   << "enabled:" << enabled;
+                   << "deviceEnabled:" << enabled;
         qWarning() << "VOICE_RECORD_HANDLER updateRecordBtnState"
                 << "source:onReduceNoiseChanged"
                 << "reduceNoise:" << reduceNoiseChanged
