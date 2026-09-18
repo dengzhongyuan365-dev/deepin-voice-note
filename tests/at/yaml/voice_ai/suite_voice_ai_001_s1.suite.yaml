@@ -1,0 +1,123 @@
+name: suite_voice_ai_001_s1_suite
+app: deepin-voice-note
+module: voice_ai
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_voice_ai_001_s1
+  name: 语音朗读_选中文本朗读与重复朗读
+  description: 覆盖xlsx用例1873475、1873467、1873451、1676463「语音朗读」；输入指定正文并选中，通过右键菜单重复触发语音朗读，再通过Alt+M触发，验证流程后编辑器仍可用。
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.5
+    note: 点击当前新建笔记的富文本区域，激活编辑焦点
+  - step_type: action
+    action: keyboard_type
+    text: 朗读测试文字
+    wait: 1.0
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: ctrl+a
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const ed=document.querySelector('.ProseMirror');\n const\
+        \ text=ed ? (ed.innerText||ed.textContent||'') : '';\n if (!text.includes('朗读测试文字'))\
+        \ throw new Error('朗读测试文字 not present in editor');\n return {textPresent:true};\n\
+        })()"
+    wait: 0.5
+    note: 确认朗读前正文包含指定文本
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: (function(){ const s=window.getSelection(); if (!s || s.toString().trim()
+        !== '朗读测试文字') throw new Error('正文未完成全选'); return {selectedText:s.toString()};
+        })()
+    wait: 0.3
+    note: 确认正文已被选中后再打开右键菜单
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      selector: .ProseMirror
+      button: right
+    wait: 1.0
+    note: 对选中的正文区域执行真实右键操作
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音朗读
+      role: menu item
+    do: click
+    wait: 1.0
+    note: 点击右键菜单中的语音朗读
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: ctrl+a
+    wait: 0.5
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      selector: .ProseMirror
+      button: right
+    wait: 1.0
+    note: 再次对选中的正文区域执行真实右键操作
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音朗读
+      role: menu item
+    do: click
+    wait: 1.0
+    note: 再次点击右键菜单中的语音朗读，验证重复触发
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: Alt+M
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const ed=document.querySelector('.ProseMirror');\n if\
+        \ (!ed) throw new Error('editor disappeared after speech shortcut');\n return\
+        \ true;\n})()"
+    wait: 0.5
+    note: 确认重复朗读及快捷键后编辑器仍可用
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note

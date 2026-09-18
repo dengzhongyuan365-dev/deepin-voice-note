@@ -1,0 +1,87 @@
+name: suite_voice_ai_002_s1_suite
+app: deepin-voice-note
+module: voice_ai
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_voice_ai_002_s1
+  name: 语音听写_AI唤起首次与快捷键
+  description: 覆盖xlsx用例1873469、1676459「语音听写」；输入具体正文后通过右键菜单和Alt+M分别触发听写入口，验证正文编辑器仍存在且未崩溃。
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.5
+    note: 点击当前新建笔记的富文本区域，激活编辑焦点
+  - step_type: action
+    action: keyboard_type
+    text: 听写测试文字
+    wait: 1.0
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      selector: .ProseMirror
+      button: right
+    wait: 1.0
+    note: 对正文编辑区域执行真实右键操作
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音听写
+      role: menu item
+    do: click
+    wait: 1.0
+    note: 点击右键菜单中的语音听写
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const ed=document.querySelector('.ProseMirror');\n if\
+        \ (!ed || !(ed.innerText||ed.textContent||'').includes('听写测试文字')) throw new\
+        \ Error('editable text not present after dictation entry');\n return true;\n\
+        })()"
+    wait: 0.5
+    note: 确认语音听写入口触发后正文仍可编辑
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: Alt+M
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const ed=document.querySelector('.ProseMirror');\n if\
+        \ (!ed) throw new Error('editor disappeared after dictation shortcut');\n\
+        \ return true;\n})()"
+    wait: 0.5
+    note: 确认快捷键唤起听写后编辑器仍可用
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note

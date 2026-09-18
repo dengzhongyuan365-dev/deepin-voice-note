@@ -1,0 +1,125 @@
+name: suite_voice_ai_003_s1_suite
+app: deepin-voice-note
+module: voice_ai
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z
+    "$SINK" ] || [ "$SINK" = null-sink ]; then SINK=$(pactl list short sinks | awk '\''$2 != "null-sink" {print $2; exit}'\'');
+    fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor"
+    2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_voice_ai_003_s1
+  name: 语音转文字_转写网络正常
+  description: 覆盖xlsx用例1676435、1680885「语音转文字」；通过真实录音、右键菜单触发转写，等待文案生成后尝试输入edit_try_002，验证文案只读且内容不变。
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --select SettingsMenuItem --wait-visible InternalRadioButton
+      --click-visible InternalRadioButton --timeout 8'
+    wait: 1.5
+    note: 打开标题栏主菜单并点击设置菜单项
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 1.0
+    note: 使用 Alt+F4 关闭设置弹窗，回到主界面
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: focus
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n  const btn = document.querySelector('button[data-format=\\\"insertVoice\\\"]');\n  if (!btn)\
+        \ throw new Error('insertVoice button not found');\n  btn.click();\n  return true;\n})()\n"
+    wait: 2.0
+    note: 通过 QtWebEngine DevTools 执行 DOM click，点击 Tiptap 录音按钮
+  - step_type: action
+    action: session_start
+    command: bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay
+      -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open
+      "$A"; fi'
+    wait: 5.5
+    note: 录音过程中播放内置音频资源，供内部音频录制
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+    note: 停止录音并生成语音笔记，后续对语音块触发转写
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+    note: 通过 CDP 对 Tiptap 语音块发真实右键事件，触发应用原生右键菜单
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音转文字
+      role: menu item
+    do: click
+    wait: 2.0
+    note: 点击语音块右键菜单中的语音转文字
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 60
+      script: "(function(){\n  return new Promise(function(resolve, reject){\n    const deadline = Date.now() + 55000;\n \
+        \   function poll(){\n      const textEl = document.querySelector('.translateText');\n      const text = textEl ?\
+        \ (textEl.innerText || textEl.textContent || '').trim() : '';\n      if (text) return resolve({ transcriptLength:\
+        \ text.length });\n      if (Date.now() > deadline) return reject(new Error('transcript text not generated'));\n \
+        \     setTimeout(poll, 500);\n    }\n    poll();\n  });\n})()\n"
+    wait: 1.0
+    note: 等待右键菜单触发的语音转文字生成转写文案
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const el=document.querySelector('.translateText');\n if (!el) throw new Error('transcript text\
+        \ element not found');\n const text=(el.innerText||el.textContent||'').trim();\n if (!text) throw new Error('transcript\
+        \ is empty');\n window.__atTranscriptBefore=text;\n el.focus();\n return {transcriptLength:text.length, ariaReadonly:el.getAttribute('aria-readonly')};\n\
+        })()"
+    wait: 0.5
+    note: 记录转写文案并准备验证只读属性
+  - step_type: action
+    action: keyboard_type
+    selector:
+      name: TiptapWebView
+    text: edit_try_002
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n const el=document.querySelector('.translateText');\n const after=el ? (el.innerText||el.textContent||'').trim()\
+        \ : '';\n if (!el) throw new Error('transcript text element disappeared');\n if (after.includes('edit_try_002')) throw\
+        \ new Error('transcript was editable');\n if (after !== window.__atTranscriptBefore) throw new Error('transcript changed\
+        \ after edit attempt');\n if (el.getAttribute('aria-readonly') !== 'true') throw new Error('transcript aria-readonly\
+        \ is not true');\n return {readonly:true, unchanged:true};\n})()"
+    wait: 0.5
+    note: 验证转写文案不可直接编辑且内容不变
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note

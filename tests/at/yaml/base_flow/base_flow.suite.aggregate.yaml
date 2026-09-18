@@ -1,0 +1,220 @@
+name: base_flow_suite
+app: deepin-voice-note
+module: base_flow
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_base_flow_001_s1
+  name: 冒烟_基础功能_打开新建记事本新建笔记录音播放
+  description: 覆盖1884375；基础冒烟流程：新建记事本→新建笔记→录音→完成→播放语音笔记并验证播放状态
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --select SettingsMenuItem
+      --wait-visible InternalRadioButton --click-visible InternalRadioButton --timeout
+      8'
+    wait: 1.5
+    note: 设置录制内部音频，保证录音链路不依赖外接麦克风
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 1.0
+    note: 关闭设置弹窗，回到主界面
+  - step_type: action
+    action: element_action
+    selector:
+      name: CreateFolderButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: "(function(){\n  const btn = document.querySelector('button[data-format=\"\
+        insertVoice\"]');\n  if (!btn) throw new Error('insertVoice button not found');\n\
+        \  btn.click();\n  return true;\n})()\n"
+    wait: 1.0
+    note: 点击 Tiptap 录音按钮
+  - step_type: action
+    action: session_start
+    command: bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay
+      >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A";
+      elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open
+      "$A"; fi'
+    wait: 5.5
+    note: 录音过程中播放内置音频资源
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+    note: 点击完成按钮停止录音
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: "(function(){\n  return new Promise(function(resolve, reject){\n   \
+        \ const deadline = Date.now() + 15000;\n    function poll(){\n      const\
+        \ block = document.querySelector('.voiceInfoBox[data-type=\"voice-block\"\
+        ]');\n      const button = block && block.querySelector('.voiceBtn');\n  \
+        \    if (block && button) return resolve({voiceBlock: true, playButton: true});\n\
+        \      if (Date.now() > deadline) return reject(new Error('voice block/play\
+        \ button not generated'));\n      setTimeout(poll, 300);\n    }\n    poll();\n\
+        \  });\n})()\n"
+    wait: 0.5
+    note: 验证录音生成语音笔记和播放按钮
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 1.0
+    note: 点击生成的语音笔记播放按钮
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 8
+      script: "(function(){\n  const playback = document.querySelector('.voicePlayback');\n\
+        \  if (!playback) throw new Error('voice playback node not found');\n  if\
+        \ (!playback.classList.contains('play') && !playback.classList.contains('pause'))\
+        \ {\n    throw new Error('voice playback did not enter active play/pause state:\
+        \ ' + playback.className);\n  }\n  return {className: playback.className};\n\
+        })()\n"
+    wait: 0.5
+    note: 断言语音笔记进入播放相关状态
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+- id: suite_base_flow_002_s1
+  name: 新建笔记_多入口创建
+  description: 覆盖1676341、1676411；通过笔记右键菜单、记事本右键菜单、Ctrl+B、聚焦新建笔记按钮后Enter四种入口创建文本笔记
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-note-menu
+      --timeout 10'
+    wait: 1.0
+    note: 右键笔记列表任一笔记并点击“新建笔记”，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-folder-menu
+      --timeout 10'
+    wait: 1.0
+    note: 右键左侧记事本并点击“新建笔记”，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-ctrl-b
+      --timeout 10'
+    wait: 1.0
+    note: 按Ctrl+B新建文本笔记，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-enter
+      --timeout 10'
+    wait: 1.0
+    note: 焦点移动到“新建笔记”按钮后按Enter，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py assert-note-editable
+      --timeout 10'
+    wait: 0.5
+    note: 验证详情页编辑区可输入
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NewNoteButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+- id: suite_base_flow_003_s1
+  name: 压力_连续新建删除_记事本与文本笔记
+  description: 覆盖1635299、1635301；连续新建20个记事本并删除、连续新建20个文本笔记并删除，验证无崩溃且数量恢复
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py pressure-create-delete
+      --folders 20 --notes 20 --timeout 15 --interval 0.12'
+    wait: 1.0
+    note: 通过真实按钮、右键菜单和确认弹窗完成20次记事本/笔记新建删除，并校验数据库数量恢复
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: CreateFolderButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NewNoteButton
+- id: suite_base_flow_004_s1
+  name: 长列表_记事本与笔记可滚动浏览
+  description: 覆盖1634901、1634865；创建超过一屏的记事本和文本笔记后滚动到顶部/底部，验证滚动条和可见条目
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py verify-long-lists --folders
+      25 --notes 25 --timeout 15 --interval 0.08'
+    wait: 1.0
+    note: 创建长列表并通过Home/End滚动验证顶部、底部可见条目和滚动条
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListScrollBar
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteListScrollBar

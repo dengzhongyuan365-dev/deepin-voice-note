@@ -1,0 +1,124 @@
+name: suite_base_flow_001_s1_suite
+app: deepin-voice-note
+module: base_flow
+setup:
+- action: session_start
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || [ "$SINK" = null-sink ]; then SINK=$(pactl list short sinks | awk '\''$2 != "null-sink" {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_base_flow_001_s1
+  name: 冒烟_基础功能_打开新建记事本新建笔记录音播放
+  description: 覆盖1884375；基础冒烟流程：新建记事本→新建笔记→录音→完成→播放语音笔记并验证播放状态
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --select SettingsMenuItem --wait-visible InternalRadioButton --click-visible InternalRadioButton --timeout 8'
+    wait: 1.5
+    note: 设置录制内部音频，保证录音链路不依赖外接麦克风
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 1.0
+    note: 关闭设置弹窗，回到主界面
+  - step_type: action
+    action: element_action
+    selector:
+      name: CreateFolderButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 点击 Tiptap 录音按钮
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+    note: 录音过程中播放内置音频资源
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+    note: 点击完成按钮停止录音
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const block = document.querySelector('.voiceInfoBox[data-type="voice-block"]');
+              const button = block && block.querySelector('.voiceBtn');
+              if (block && button) return resolve({voiceBlock: true, playButton: true});
+              if (Date.now() > deadline) return reject(new Error('voice block/play button not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+    note: 验证录音生成语音笔记和播放按钮
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 1.0
+    note: 点击生成的语音笔记播放按钮
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 8
+      script: |
+        (function(){
+          const playback = document.querySelector('.voicePlayback');
+          if (!playback) throw new Error('voice playback node not found');
+          if (!playback.classList.contains('play') && !playback.classList.contains('pause')) {
+            throw new Error('voice playback did not enter active play/pause state: ' + playback.className);
+          }
+          return {className: playback.className};
+        })()
+    wait: 0.5
+    note: 断言语音笔记进入播放相关状态
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView

@@ -1,0 +1,116 @@
+name: suite_play_voice_003_s1_suite
+app: deepin-voice-note
+module: play_voice
+setup:
+- action: session_start
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_play_voice_003_s1
+  name: 播放中_保存流程与编辑
+  description: 录制语音后播放中进入保存语音流程，取消保存后验证语音仍存在并可继续编辑正文
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 点击 Tiptap 录音按钮
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+    note: 播放内置音频并录制约5秒
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+    note: 等待语音块生成
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 1.0
+    note: 播放语音笔记
+  - step_type: action
+    action: session_start
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect'
+    wait: 1.0
+    note: 播放中进入保存语音流程
+  - step_type: action
+    action: file_dialog_cancel
+    wait: 1.0
+    note: 取消文件保存对话框
+  - step_type: action
+    action: session_start
+    command: bash -lc 'sleep 5'
+    wait: 0.1
+    note: 等待5秒语音播放自然结束
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 5
+      script: |
+        (function(){
+          const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+          if (count < 1) throw new Error('voice block missing after save flow');
+          return {voiceCount: count};
+        })()
+    wait: 0.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: keyboard_type
+    text: play_edit_001
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView

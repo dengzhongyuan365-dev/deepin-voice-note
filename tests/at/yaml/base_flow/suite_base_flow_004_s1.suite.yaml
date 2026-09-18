@@ -1,0 +1,39 @@
+name: suite_base_flow_004_s1_suite
+app: deepin-voice-note
+module: base_flow
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_base_flow_004_s1
+  name: 长列表_记事本与笔记可滚动浏览
+  description: 覆盖1634901、1634865；创建超过一屏的记事本和文本笔记后滚动到顶部/底部，验证滚动条和可见条目
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py verify-long-lists --folders 25 --notes 25 --timeout 15 --interval 0.08'
+    wait: 1.0
+    note: 创建长列表并通过Home/End滚动验证顶部、底部可见条目和滚动条
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListScrollBar
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteListScrollBar

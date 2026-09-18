@@ -1,0 +1,55 @@
+name: suite_base_flow_002_s1_suite
+app: deepin-voice-note
+module: base_flow
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_base_flow_002_s1
+  name: 新建笔记_多入口创建
+  description: 覆盖1676341、1676411；通过笔记右键菜单、记事本右键菜单、Ctrl+B、聚焦新建笔记按钮后Enter四种入口创建文本笔记
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-note-menu --timeout 10'
+    wait: 1.0
+    note: 右键笔记列表任一笔记并点击“新建笔记”，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-folder-menu --timeout 10'
+    wait: 1.0
+    note: 右键左侧记事本并点击“新建笔记”，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-ctrl-b --timeout 10'
+    wait: 1.0
+    note: 按Ctrl+B新建文本笔记，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py create-note-from-enter --timeout 10'
+    wait: 1.0
+    note: 焦点移动到“新建笔记”按钮后按Enter，断言笔记数量增加
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py assert-note-editable --timeout 10'
+    wait: 0.5
+    note: 验证详情页编辑区可输入
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NewNoteButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView

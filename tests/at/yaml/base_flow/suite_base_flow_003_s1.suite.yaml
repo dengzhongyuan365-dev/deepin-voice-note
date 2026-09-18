@@ -1,0 +1,35 @@
+name: suite_base_flow_003_s1_suite
+app: deepin-voice-note
+module: base_flow
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_base_flow_003_s1
+  name: 压力_连续新建删除_记事本与文本笔记
+  description: 覆盖1635299、1635301；连续新建20个记事本并删除、连续新建20个文本笔记并删除，验证无崩溃且数量恢复
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/base_flow_actions.py pressure-create-delete --folders 20 --notes 20 --timeout 15 --interval 0.12'
+    wait: 1.0
+    note: 通过真实按钮、右键菜单和确认弹窗完成20次记事本/笔记新建删除，并校验数据库数量恢复
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: CreateFolderButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NewNoteButton
