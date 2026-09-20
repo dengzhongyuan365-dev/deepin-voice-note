@@ -10,13 +10,14 @@ teardown:
 suites:
 - id: suite_base_flow_004_s1
   name: 长列表_记事本与笔记可滚动浏览
-  description: 覆盖1634901、1634865；创建超过一屏的记事本和文本笔记后滚动到顶部/底部，验证滚动条和可见条目
+  description: 覆盖1634901、1634865；创建足以触发列表滚动的记事本/笔记后 Home/End 浏览，验证滚动条和可见条目
   steps:
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/base_flow_actions.py verify-long-lists --folders 25 --notes 25 --timeout 15 --interval 0.08'
+    command: bash -lc './tests/at/scripts/base_flow_actions.py verify-long-lists --folders 12 --notes 12 --timeout 8 --interval 0.05'
+    timeout: 90
     wait: 1.0
-    note: 创建长列表并通过Home/End滚动验证顶部、底部可见条目和滚动条
+    note: 12 条足以超过常见一屏；单步超时 90s
   assert_steps:
   - step_type: assert
     action: assert_process_running

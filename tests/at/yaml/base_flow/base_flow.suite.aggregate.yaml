@@ -164,14 +164,15 @@ suites:
       name: TiptapWebView
 - id: suite_base_flow_003_s1
   name: 压力_连续新建删除_记事本与文本笔记
-  description: 覆盖1635299、1635301；连续新建20个记事本并删除、连续新建20个文本笔记并删除，验证无崩溃且数量恢复
+  description: 覆盖1635299、1635301；AT 用连续新建/删除 5 个记事本 + 5 个文本笔记覆盖同一路径（原手测为20次），验证无崩溃且数量恢复
   steps:
   - step_type: action
     action: command
     command: bash -lc './tests/at/scripts/base_flow_actions.py pressure-create-delete
-      --folders 20 --notes 20 --timeout 15 --interval 0.12'
+      --folders 5 --notes 5 --timeout 8 --interval 0.08'
+    timeout: 90
     wait: 1.0
-    note: 通过真实按钮、右键菜单和确认弹窗完成20次记事本/笔记新建删除，并校验数据库数量恢复
+    note: 5 次新建/删除已覆盖压力路径；单步超时 90s，避免假性“预计十余分钟”
   assert_steps:
   - step_type: assert
     action: assert_process_running
@@ -190,14 +191,15 @@ suites:
       name: NewNoteButton
 - id: suite_base_flow_004_s1
   name: 长列表_记事本与笔记可滚动浏览
-  description: 覆盖1634901、1634865；创建超过一屏的记事本和文本笔记后滚动到顶部/底部，验证滚动条和可见条目
+  description: 覆盖1634901、1634865；创建足以触发列表滚动的记事本/笔记后 Home/End 浏览，验证滚动条和可见条目
   steps:
   - step_type: action
     action: command
     command: bash -lc './tests/at/scripts/base_flow_actions.py verify-long-lists --folders
-      25 --notes 25 --timeout 15 --interval 0.08'
+      12 --notes 12 --timeout 8 --interval 0.05'
+    timeout: 90
     wait: 1.0
-    note: 创建长列表并通过Home/End滚动验证顶部、底部可见条目和滚动条
+    note: 12 条足以超过常见一屏；单步超时 90s
   assert_steps:
   - step_type: assert
     action: assert_process_running

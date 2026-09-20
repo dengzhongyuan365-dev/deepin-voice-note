@@ -175,6 +175,9 @@ Loader {
                     width: active ? btnWidth : 0
 
                     sourceComponent: WarningButton {
+                        // Keep a stable AT-SPI name so delete-confirm helpers can
+                        // find this button even when the visible text is translated.
+                        Accessible.name: "ConfirmButton"
                         anchors.fill: parent
                         font: DTK.fontManager.t6
                         text: handler.warnConfirm
