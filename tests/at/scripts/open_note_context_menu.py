@@ -175,6 +175,11 @@ def main() -> int:
     parser.add_argument("--expect", help="visible menu item name expected after right click")
     parser.add_argument("--click-expect", action="store_true")
     parser.add_argument("--cancel-after", action="store_true")
+    parser.add_argument(
+        "--confirm-after",
+        action="store_true",
+        help="After clicking expect (e.g. 删除), wait for and press ConfirmButton",
+    )
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
 
@@ -207,6 +212,22 @@ def main() -> int:
                     cancel = _wait_named(app, "CancelButton", 5.0, visible=True)
                     _press(cancel)
                     print("clicked CancelButton via AT-SPI", flush=True)
+                elif args.confirm_after:
+                    # Delete dialog: Accessible.name=ConfirmButton; visible label may be 删除
+                    confirm = None
+                    last_confirm = None
+                    for name in ("ConfirmButton", "删除", "Delete"):
+                        try:
+                            confirm = _wait_named(app, name, 2.0, visible=True)
+                            break
+                        except Exception as exc:
+                            last_confirm = exc
+                    if confirm is None:
+                        raise RuntimeError(
+                            f"ConfirmButton not found after {args.expect}: {last_confirm}"
+                        )
+                    _press(confirm)
+                    print(f"clicked confirm via AT-SPI: {_name(confirm)}", flush=True)
                 elif args.expect == "删除":
                     _wait_named(app, "CancelButton", 5.0, visible=True)
                 else:

@@ -17,26 +17,26 @@ suites:
     selector:
       name: NewNoteButton
     do: click
+    wait: 0.5
   - step_type: action
     action: mouse_click
     selector:
       name: NoteContentWebView
+    wait: 0.3
   - step_type: action
     action: keyboard_type
     text: 保存路径测试内容
+    wait: 0.5
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 保存笔记
-    - 保存为TXT
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为TXT --index 0 --timeout 15'
+    wait: 1.0
+    note: 用独立 AT-SPI helper；避免 dtk_context_menu 子菜单导航超时
   - step_type: action
     action: file_dialog_select
     path: /tmp/
     name: vnote_custom_path.txt
+    wait: 3.0
   assert_steps:
   - step_type: assert
     action: assert_element

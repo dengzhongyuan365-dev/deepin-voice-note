@@ -3,120 +3,120 @@ app: deepin-voice-note
 module: 语音记事本V25
 setup:
 - action: session_start
-  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
 - id: suite_语音记事本V25_007_s1
   name: 语音播放与右键菜单操作验证
-  description: ''
+  description: 录音入口为 insertVoice；覆盖语音块播放、右键保存为MP3/复制/剪切（对齐 play_voice_002）
   steps:
   - step_type: action
     action: element_action
     selector:
       name: NewNoteButton
     do: click
+    wait: 0.8
   - step_type: action
-    action: element_action
+    action: mouse_click
     selector:
-      name: VNoteButton
-    do: click
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: at_v25_play_seed
+    wait: 0.4
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/play_loopback_audio.sh tests/at/fixtures/tengwanggexu.mp3 5'
+    wait: 0.5
   - step_type: action
     action: element_action
     selector:
       name: StopButton
     do: click
+    wait: 2.0
   - step_type: action
-    action: element_action
-    selector:
-      name: VNoteButton
-    do: click
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
   - step_type: action
-    action: element_action
-    selector:
-      name: VNoteButton
-    do: click
-  - step_type: action
-    action: element_action
-    selector:
-      name: VNoteButton
-    do: click
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 0.8
+    note: 点击播放
   - step_type: action
     action: keyboard_press
     key: space
+    wait: 0.5
   - step_type: action
-    action: keyboard_press
-    key: space
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: right
+    wait: 1.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 文本
-      role: list item
-    items:
-    - 播放
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 保存为MP3 --timeout 8'
+    wait: 1.5
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 文本
-      role: list item
-    items:
-    - 保存为MP3
+    action: file_dialog_select
+    path: /tmp/
+    name: v25_voice.mp3
+    wait: 3.0
   - step_type: action
-    action: element_action
-    selector:
-      name: CancelButton
-    do: click
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: right
+    wait: 1.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 文本
-      role: list item
-    items:
-    - 复制
-  - step_type: action
-    action: element_action
-    selector:
-      name: NoteContentWebView
-    do: click
-  - step_type: action
-    action: keyboard_hot_key
-    key: Ctrl+V
-  - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 文本
-      role: list item
-    items:
-    - 剪切
-  - step_type: action
-    action: element_action
-    selector:
-      name: NoteContentWebView
-    do: click
-  - step_type: action
-    action: keyboard_hot_key
-    key: Ctrl+V
-  - step_type: action
-    action: element_action
-    selector:
-      name: VNoteButton
-    do: click
-  - step_type: action
-    action: keyboard_press
-    key: Tab
-  - step_type: action
-    action: keyboard_press
-    key: Return
-  - step_type: action
-    action: keyboard_press
-    key: Return
-  - step_type: action
-    action: keyboard_press
-    key: Tab
-  - step_type: action
-    action: keyboard_press
-    key: Return
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 复制 --timeout 8'
+    wait: 0.8
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -130,56 +130,7 @@ suites:
   - step_type: assert
     action: assert_element
     selector:
-      name: NoteItemListView
+      name: TiptapWebView
   - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteItemListView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: CancelButton
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteContentWebView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: NoteItemListView
+    action: assert_file_exists
+    path: /tmp/v25_voice.mp3

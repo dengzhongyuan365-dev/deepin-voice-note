@@ -66,13 +66,10 @@ suites:
     wait: 1.0
     note: 对选中的正文区域执行真实右键操作
   - step_type: action
-    action: element_action
-    selector:
-      name: 语音朗读
-      role: menu item
-    do: click
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
     wait: 1.0
-    note: 点击右键菜单中的语音朗读
+    note: 点击右键菜单中的语音朗读（与 voice_ai_008 一致，避免 stale AT-SPI 节点）
   - step_type: action
     action: keyboard_hot_key
     selector:
@@ -90,11 +87,8 @@ suites:
     wait: 1.0
     note: 再次对选中的正文区域执行真实右键操作
   - step_type: action
-    action: element_action
-    selector:
-      name: 语音朗读
-      role: menu item
-    do: click
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
     wait: 1.0
     note: 再次点击右键菜单中的语音朗读，验证重复触发
   - step_type: action

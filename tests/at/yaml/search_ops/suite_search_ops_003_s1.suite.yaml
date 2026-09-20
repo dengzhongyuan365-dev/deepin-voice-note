@@ -3,8 +3,9 @@ app: deepin-voice-note
 module: search_ops
 setup:
 - action: session_start
-  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || [ "$SINK" = null-sink ]; then SINK=$(pactl list short sinks | awk '\''$2 != "null-sink" {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
@@ -17,7 +18,7 @@ suites:
     selector:
       name: NewNoteButton
     do: click
-    wait: 0.5
+    wait: 0.8
   - step_type: action
     action: mouse_click
     selector:
@@ -26,38 +27,78 @@ suites:
   - step_type: action
     action: keyboard_type
     text: search_save_001
+    wait: 0.4
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 先录一条语音，否则搜索结果里「保存语音」不可用导致菜单超时
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/play_loopback_audio.sh tests/at/fixtures/tengwanggexu.mp3 5'
+    wait: 0.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
     wait: 0.5
   - step_type: action
     action: session_start
     command: bash -lc './tests/at/scripts/focus_search_and_query.py search_save_001'
     wait: 1.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 保存笔记
-    - 保存为TXT
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为TXT --index 0 --timeout 15'
     wait: 1.0
   - step_type: action
     action: file_dialog_select
     path: /tmp/
     name: search_result_note.txt
+    wait: 3.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 保存语音
-    wait: 1.0
+    action: command
+    command: bash -lc 'mkdir -p /tmp/search_result_voice && ./tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect --timeout 15'
+    wait: 1.5
   - step_type: action
     action: file_dialog_select
-    path: /tmp/
+    path: /tmp/search_result_voice/
     name: search_result_voice.mp3
+    wait: 3.0
+    note: NoteSaveVoice 走 FolderDialog；与 save_exp_005 一致用子目录
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -73,4 +114,5 @@ suites:
     name: search_result_note.txt
   - step_type: assert
     action: assert_file_exists
-    path: /tmp/search_result_voice.mp3
+    path: /tmp/search_result_voice/
+    name: search_result_voice.mp3

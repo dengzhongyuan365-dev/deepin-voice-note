@@ -28,40 +28,33 @@ suites:
     text: search_delete_001
     wait: 0.5
   - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: search_delete_001
+    wait: 0.5
+    note: 再建一条同关键字笔记，便于删除后仍有匹配项
+  - step_type: action
     action: session_start
     command: bash -lc './tests/at/scripts/focus_search_and_query.py search_delete_001'
     wait: 1.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 删除
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --confirm-after --timeout 15'
     wait: 1.0
+    note: 用独立 AT-SPI helper；避免 dtk_context_menu 超时及 ConfirmButton 未弹出
   - step_type: action
-    action: element_action
-    selector:
-      name: ConfirmButton
-      role: button
-    do: click
-    wait: 1.0
-  - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 删除
-    wait: 1.0
-  - step_type: action
-    action: element_action
-    selector:
-      name: ConfirmButton
-      role: button
-    do: click
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --confirm-after --timeout 15'
     wait: 1.0
   assert_steps:
   - step_type: assert
