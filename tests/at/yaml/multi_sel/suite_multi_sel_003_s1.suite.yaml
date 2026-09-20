@@ -13,12 +13,12 @@ suites:
   description: 覆盖1676317、1676315、1676311、1676309；多选笔记后打开右键批量菜单，触发删除入口并取消删除
   steps:
   - step_type: action
-    action: session_start
+    action: command
     command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
     wait: 2.0
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --cancel-after'
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --cancel-after --timeout 15'
     wait: 1.0
   assert_steps:
   - step_type: assert

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Open deepin-voice-note note-list context menu by runtime AT-SPI extents.
+"""Open a visible note-row context menu and optionally activate one item.
 
-This helper avoids fixed screen coordinates: it locates NoteItemListView and
-right-clicks the center of a visible note row.  It is used only to expose the
-real QML/DTK context menu; menu item selection remains in YAML via AT-SPI.
+Standalone AT-SPI helper: no YouQu/Dogtail import.  Suites only invoke this
+script via `action: command`; the runner's Python path is irrelevant.
 """
 from __future__ import annotations
 
@@ -27,21 +26,25 @@ def _children(node) -> Iterable:
         count = node.get_child_count()
     except Exception:
         return []
-    result = []
+    out = []
     for i in range(count):
         try:
             child = node.get_child_at_index(i)
         except Exception:
             continue
         if child is not None:
-            result.append(child)
-    return result
+            out.append(child)
+    return out
 
 
-def _walk(node):
+def _walk(node, depth: int = 0):
     yield node
+    # Note delegates and menu trees are shallow.  Avoid traversing the embedded
+    # WebEngine subtree, which can block while it is rebuilding.
+    if depth >= 6:
+        return
     for child in _children(node):
-        yield from _walk(child)
+        yield from _walk(child, depth + 1)
 
 
 def _name(node) -> str:
@@ -58,7 +61,7 @@ def _role(node) -> str:
         return ""
 
 
-def _visible_extents(node):
+def _extents(node):
     try:
         ext = node.get_extents(Atspi.CoordType.SCREEN)
     except Exception:
@@ -76,78 +79,87 @@ def _find_app(app_name: str):
     raise RuntimeError(f"application not found: {app_name}")
 
 
-def _find_by_name(root, name: str, visible: bool = False):
-    for node in _walk(root):
-        if _name(node) == name and (not visible or _visible_extents(node) is not None):
-            return node
-    suffix = " visible" if visible else ""
-    raise RuntimeError(f"AT-SPI{suffix} node not found by name: {name}")
+def _find_named(app, name: str, visible: bool = True):
+    for node in _walk(app):
+        if _name(node) != name:
+            continue
+        if visible and _extents(node) is None:
+            continue
+        return node
+    raise RuntimeError(f"node not found: {name}")
 
 
-def _wait_for_name(root, name: str, timeout: float, visible: bool = False):
+def _wait_named(app, name: str, timeout: float, visible: bool = True):
     deadline = time.time() + timeout
-    last_error = None
+    last = None
     while time.time() < deadline:
         try:
-            return _find_by_name(root, name, visible=visible)
-        except RuntimeError as exc:
-            last_error = exc
+            return _find_named(app, name, visible)
+        except Exception as exc:
+            last = exc
             time.sleep(0.1)
-    suffix = " visible" if visible else ""
-    raise last_error or RuntimeError(f"AT-SPI{suffix} node not found by name: {name}")
+    raise RuntimeError(str(last) if last else f"timeout waiting {name}")
 
 
 def _visible_note_items(app):
-    list_view = _find_by_name(app, "NoteItemListView")
-    items = []
+    list_view = _find_named(app, "NoteItemListView", visible=True)
+    list_ext = _extents(list_view)
+    rows = []
     for node in _walk(list_view):
-        if node is list_view:
+        if node is list_view or _role(node) != "list item":
             continue
-        ext = _visible_extents(node)
-        if ext is None:
+        ext = _extents(node)
+        if ext is None or not _name(node):
             continue
-        role = _role(node)
-        name = _name(node)
-        if name and (role in {"list item", "label", "panel"}) and ext.width >= 40 and ext.height >= 20:
-            items.append((ext.y, node))
+        if list_ext:
+            if not (
+                list_ext.x <= ext.x < list_ext.x + list_ext.width
+                and list_ext.y <= ext.y < list_ext.y + list_ext.height
+            ):
+                continue
+        if ext.width >= 40 and ext.height >= 20:
+            rows.append((ext.y, ext.x, node))
+    rows.sort(key=lambda item: (item[0], item[1]))
+
     result = []
-    seen_y = set()
-    for y, node in sorted(items, key=lambda pair: pair[0]):
+    seen = set()
+    for y, _x, node in rows:
         bucket = int(y / 8)
-        if bucket in seen_y:
+        if bucket in seen:
             continue
-        seen_y.add(bucket)
+        seen.add(bucket)
         result.append(node)
     return result
 
 
 def _press(node) -> None:
-    """Invoke the visible AT-SPI action without relying on coordinates."""
     try:
-        count = node.get_n_actions()
-    except Exception:
-        count = 0
-    for index in range(max(count, 0)):
+        n_actions = node.get_n_actions()
+    except Exception as exc:
+        raise RuntimeError(f"node has no actions: {_name(node)}") from exc
+    if n_actions <= 0:
+        raise RuntimeError(f"node action count is 0: {_name(node)}")
+    for i in range(n_actions):
         try:
-            action_name = (node.get_action_name(index) or "").lower()
-            if action_name in {"press", "click", "activate"}:
-                node.do_action(index)
+            if (node.get_action_name(i) or "").lower() == "press":
+                node.do_action(i)
                 return
         except Exception:
             continue
-    if count > 0:
-        node.do_action(0)
-        return
-    raise RuntimeError(f"AT-SPI menu item has no action: {_name(node)}")
+    node.do_action(0)
 
 
-def _right_click_center(node) -> None:
-    ext = _visible_extents(node)
-    if ext is None:
-        raise RuntimeError(f"node is not visible: {_name(node)}")
+def _click_extents(ext, button: int) -> None:
     x = int(ext.x + ext.width / 2)
     y = int(ext.y + ext.height / 2)
-    subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "3"], check=True)
+    subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", str(button)], check=True)
+
+
+def _right_click(node) -> None:
+    ext = _extents(node)
+    if ext is None:
+        raise RuntimeError(f"node is not visible: {_name(node)}")
+    _click_extents(ext, 3)
     time.sleep(0.5)
 
 
@@ -156,16 +168,8 @@ def main() -> int:
     parser.add_argument("--app", default="deepin-voice-note")
     parser.add_argument("--index", type=int, default=0)
     parser.add_argument("--expect", help="visible menu item name expected after right click")
-    parser.add_argument(
-        "--click-expect",
-        action="store_true",
-        help="after --expect is visible, invoke its AT-SPI action before returning",
-    )
-    parser.add_argument(
-        "--cancel-after",
-        action="store_true",
-        help="after clicking the expected item, click a visible CancelButton via AT-SPI",
-    )
+    parser.add_argument("--click-expect", action="store_true")
+    parser.add_argument("--cancel-after", action="store_true")
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
 
@@ -175,41 +179,40 @@ def main() -> int:
         pass
 
     deadline = time.time() + args.timeout
-    last_count = 0
+    last = None
     while time.time() < deadline:
-        app = _find_app(args.app)
-        items = _visible_note_items(app)
-        last_count = len(items)
-        if len(items) > args.index:
-            _right_click_center(items[args.index])
+        try:
+            app = _find_app(args.app)
+            rows = _visible_note_items(app)
+            if len(rows) <= args.index:
+                raise RuntimeError(f"need visible note item at index {args.index}, got {len(rows)}")
+            _right_click(rows[args.index])
             if not args.expect:
                 return 0
+            item = _wait_named(
+                app, args.expect, min(2.0, max(0.2, deadline - time.time())), visible=True
+            )
+            if args.click_expect:
+                _press(item)
+                print(f"clicked visible menu item via AT-SPI: {args.expect}", flush=True)
+                if args.cancel_after:
+                    cancel = _wait_named(app, "CancelButton", 5.0, visible=True)
+                    _press(cancel)
+                    print("clicked CancelButton via AT-SPI", flush=True)
+                elif args.expect == "删除":
+                    _wait_named(app, "CancelButton", 5.0, visible=True)
+                else:
+                    time.sleep(0.5)
+            return 0
+        except Exception as exc:
+            last = exc
+            # Dismiss a stale popup before retrying the same concrete row.
             try:
-                app = _find_app(args.app)
-                menu_item = _wait_for_name(app, args.expect, 1.5, visible=True)
-                if args.click_expect:
-                    _press(menu_item)
-                    print(f"clicked visible menu item via AT-SPI: {args.expect}", flush=True)
-                    # Delete opens an asynchronous confirmation dialog.  Wait for
-                    # its real AT-SPI node before handing control back to YouQu,
-                    # otherwise the next action can race dialog creation.
-                    if args.cancel_after:
-                        cancel = _wait_for_name(_find_app(args.app), "CancelButton", 5.0, visible=True)
-                        _press(cancel)
-                        print("clicked CancelButton via AT-SPI", flush=True)
-                    elif args.expect == "删除":
-                        _wait_for_name(_find_app(args.app), "CancelButton", 5.0, visible=True)
-                    else:
-                        time.sleep(0.5)
-                return 0
-            except RuntimeError:
-                # The note menu updates its enabled/visible actions asynchronously
-                # after checkNoteVoice/checkNoteText. Retry the same real right click
-                # until the expected concrete menu item is visible.
-                time.sleep(0.2)
-                continue
-        time.sleep(0.2)
-    raise RuntimeError(f"need visible note item at index {args.index}, got {last_count}")
+                subprocess.run(["xdotool", "key", "Escape"], check=False)
+            except Exception:
+                pass
+            time.sleep(0.2)
+    raise RuntimeError(str(last) if last else "context menu operation timed out")
 
 
 if __name__ == "__main__":

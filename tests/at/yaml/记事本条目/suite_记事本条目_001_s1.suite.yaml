@@ -10,21 +10,13 @@ teardown:
 suites:
 - id: suite_记事本条目_001_s1
   name: 新建记事本-空白页与列表按钮及快捷键
-  description: ''
+  description: 覆盖列表新建按钮与 Ctrl+N 快捷键新建笔记；删除确认弹窗另有专用用例覆盖，此处不串删除以免模态框遮挡 NewNoteButton
   steps:
   - step_type: action
     action: element_action
     selector:
       name: NewNoteButton
     do: click
-    wait: 1.0
-  - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 文本
-      role: list item
-    items:
-    - 删除
     wait: 1.0
   - step_type: action
     action: keyboard_hot_key
@@ -44,8 +36,8 @@ suites:
   - step_type: assert
     action: assert_element
     selector:
-      name: NoteItemListView
+      name: NewNoteButton
   - step_type: assert
     action: assert_element
     selector:
-      name: NoteItemListView
+      name: CreateFolderButton

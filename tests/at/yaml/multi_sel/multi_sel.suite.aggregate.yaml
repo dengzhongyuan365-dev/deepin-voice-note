@@ -62,7 +62,7 @@ suites:
     wait: 2.0
   - step_type: action
     action: session_start
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --cancel-after'
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --cancel-after --timeout 15'
     wait: 1.0
   assert_steps:
   - step_type: assert

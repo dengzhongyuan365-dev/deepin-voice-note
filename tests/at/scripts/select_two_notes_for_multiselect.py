@@ -1,204 +1,104 @@
 #!/usr/bin/env python3
-"""Enter multi-select state in deepin-voice-note without fixed coordinates.
-
-The helper creates/selects visible note rows through the AT-SPI tree.  It uses
-runtime extents of list items to click their centers, then Shift-clicks the
-second visible item so QML ItemListView enters range multi-select mode.
-"""
+"""Select two concrete visible note rows using runtime AT-SPI extents."""
 from __future__ import annotations
 
 import argparse
 import subprocess
 import sys
 import time
-import warnings
-from collections.abc import Iterable
 
-import gi
-
-gi.require_version("Atspi", "2.0")
-from gi.repository import Atspi  # noqa: E402
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+try:
+    from src.dogtail_utils import DogtailUtils
+except ModuleNotFoundError:
+    root = "/home/dzy/ATUT/youqu-ai"
+    if root not in sys.path: sys.path.insert(0, root)
+    from src.dogtail_utils import DogtailUtils
 
 
-def _children(node) -> Iterable:
+def name(n):
+    try: return n.name or ""
+    except Exception: return ""
+
+def role(n):
+    try: return n.roleName or ""
+    except Exception: return ""
+
+def ext(n):
     try:
-        count = node.get_child_count()
-    except Exception:
-        return []
-    result = []
-    for i in range(count):
-        try:
-            child = node.get_child_at_index(i)
-        except Exception:
-            continue
-        if child is not None:
-            result.append(child)
-    return result
+        e=n.extents
+        return e if e and e[2]>0 and e[3]>0 else None
+    except Exception: return None
 
+def children(n):
+    try: return list(n.children)
+    except Exception: return []
 
-def _walk(node):
-    yield node
-    for child in _children(node):
-        yield from _walk(child)
+def walk(n, depth=0):
+    yield n
+    if depth >= 6: return
+    for c in children(n): yield from walk(c, depth+1)
 
+def find(dog,wanted,visible=True):
+    ns=dog.find_elements_by_attr(f"$//{wanted}/") or []
+    for n in ns:
+        if not visible or ext(n): return n
+    raise RuntimeError(f"node not found: {wanted}")
 
-def _name(node) -> str:
-    try:
-        return node.get_name() or ""
-    except Exception:
-        return ""
+def wait(dog,wanted,timeout,visible=True):
+    end=time.time()+timeout; last=None
+    while time.time()<end:
+        try:return find(dog,wanted,visible)
+        except Exception as e:last=e;time.sleep(.1)
+    raise RuntimeError(str(last) if last else f"timeout waiting {wanted}")
 
+def rows(dog):
+    lv=find(dog,'NoteItemListView'); le=ext(lv); found=[]
+    for n in walk(lv):
+        if n is lv or role(n)!='list item' or not name(n): continue
+        e=ext(n)
+        if not e: continue
+        if le and not (le[0] <= e[0] < le[0]+le[2] and le[1] <= e[1] < le[1]+le[3]): continue
+        if e[2]>=40 and e[3]>=20: found.append((e[1],e[0],n))
+    found.sort(key=lambda x:(x[0],x[1])); out=[];seen=set()
+    for y,_x,n in found:
+        b=int(y/8)
+        if b not in seen:seen.add(b);out.append(n)
+    return out
 
-def _role(node) -> str:
-    try:
-        return node.get_role_name() or ""
-    except Exception:
-        return ""
-
-
-def _visible_extents(node):
-    try:
-        ext = node.get_extents(Atspi.CoordType.SCREEN)
-    except Exception:
-        return None
-    if ext.width <= 0 or ext.height <= 0:
-        return None
-    return ext
-
-
-def _find_app(app_name: str):
-    desktop = Atspi.get_desktop(0)
-    for app in _children(desktop):
-        if _name(app) == app_name:
-            return app
-    raise RuntimeError(f"application not found: {app_name}")
-
-
-def _find_by_name(root, name: str):
-    for node in _walk(root):
-        if _name(node) == name:
-            return node
-    raise RuntimeError(f"AT-SPI node not found by name: {name}")
-
-
-def _wait_for_name(root, name: str, timeout: float):
-    deadline = time.time() + timeout
-    last_error = None
-    while time.time() < deadline:
-        try:
-            return _find_by_name(root, name)
-        except RuntimeError as exc:
-            last_error = exc
-            time.sleep(0.1)
-    raise last_error or RuntimeError(f"AT-SPI node not found by name: {name}")
-
-
-def _press(node) -> None:
-    try:
-        n_actions = node.get_n_actions()
-    except Exception:
-        n_actions = 0
-    for index in range(max(n_actions, 0)):
-        try:
-            if (node.get_action_name(index) or "").lower() == "press":
-                node.do_action(index)
-                return
-        except Exception:
-            continue
-    if n_actions > 0:
-        node.do_action(0)
-        return
-    # Some QtQuick buttons are visible/clickable but expose no AT-SPI action.
-    # Fall back to a runtime-extents center click; this is not a fixed coordinate.
-    _click_center(node)
-
-
-def _click_center(node, modifiers: list[str] | None = None) -> None:
-    ext = _visible_extents(node)
-    if ext is None:
-        raise RuntimeError(f"node is not visible: {_name(node)}")
-    x = int(ext.x + ext.width / 2)
-    y = int(ext.y + ext.height / 2)
-    if modifiers:
-        for key in modifiers:
-            subprocess.run(["xdotool", "keydown", key], check=True)
-    try:
-        subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"], check=True)
+def click(e,shift=False):
+    x=int(e[0]+e[2]/2);y=int(e[1]+e[3]/2)
+    if shift: subprocess.run(['xdotool','keydown','Shift_L'],check=True)
+    try: subprocess.run(['xdotool','mousemove',str(x),str(y),'click','1'],check=True)
     finally:
-        if modifiers:
-            for key in reversed(modifiers):
-                subprocess.run(["xdotool", "keyup", key], check=True)
-    time.sleep(0.3)
+        if shift: subprocess.run(['xdotool','keyup','Shift_L'],check=True)
+    time.sleep(.5)
 
+def press(n):
+    actions=getattr(n,'actions',{}) or {}
+    for a in ('Press','Click','Activate'):
+        try:
+            if a in actions:n.doActionNamed(a);return
+        except Exception:continue
+    try:n.click();return
+    except Exception:pass
+    e=ext(n)
+    if not e:raise RuntimeError(f'not visible: {name(n)}')
+    click(e)
 
-def _visible_note_items(app):
-    list_view = _find_by_name(app, "NoteItemListView")
-    items = []
-    for node in _walk(list_view):
-        if node is list_view:
-            continue
-        ext = _visible_extents(node)
-        if ext is None:
-            continue
-        role = _role(node)
-        name = _name(node)
-        # QML exposes real note rows as list items with the note title; in some
-        # AT-SPI backends they appear as focusable labels.  Keep only rows large
-        # enough to be clickable and ignore unnamed decorative controls.
-        if name and (role in {"list item", "label", "panel"}) and ext.width >= 40 and ext.height >= 20:
-            items.append((ext.y, node))
-    # De-duplicate by vertical position/name to avoid labels inside one row.
-    result = []
-    seen_y = set()
-    for y, node in sorted(items, key=lambda pair: pair[0]):
-        bucket = int(y / 8)
-        if bucket in seen_y:
-            continue
-        seen_y.add(bucket)
-        result.append(node)
-    return result
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--app", default="deepin-voice-note")
-    parser.add_argument("--timeout", type=float, default=5.0)
-    args = parser.parse_args()
-
-    try:
-        Atspi.init()
-    except Exception:
-        pass
-
-    app = _find_app(args.app)
-    # Ensure at least two notes exist in the fixture session.
-    new_note = _wait_for_name(app, "NewNoteButton", args.timeout)
-    _press(new_note)
-    time.sleep(0.5)
-    _press(new_note)
-    time.sleep(0.8)
-
-    deadline = time.time() + args.timeout
-    items = []
-    while time.time() < deadline:
-        items = _visible_note_items(app)
-        if len(items) >= 2:
-            break
-        time.sleep(0.2)
-    if len(items) < 2:
-        raise RuntimeError(f"need at least two visible note items, got {len(items)}")
-
-    _click_center(items[0])
-    _click_center(items[1], modifiers=["Shift_L"])
-    _wait_for_name(app, "MultipleChoicesView", args.timeout)
+def main():
+    p=argparse.ArgumentParser();p.add_argument('--app',default='deepin-voice-note');p.add_argument('--timeout',type=float,default=10);p.add_argument('--existing',action='store_true');a=p.parse_args()
+    dog=DogtailUtils(a.app)
+    if not a.existing:
+        new=wait(dog,'NewNoteButton',a.timeout);press(new);time.sleep(.5);press(new);time.sleep(.8)
+    end=time.time()+a.timeout; items=[]
+    while time.time()<end:
+        items=rows(dog)
+        if len(items)>=2:break
+        time.sleep(.2)
+    if len(items)<2:raise RuntimeError(f'need at least two visible note items, got {len(items)}')
+    click(ext(items[0]));click(ext(items[1]),shift=True)
+    wait(dog,'MultipleChoicesView',a.timeout)
     return 0
-
-
-if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"select_two_notes_for_multiselect.py: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+if __name__=='__main__':
+    try:raise SystemExit(main())
+    except Exception as e:print(f'select_two_notes_for_multiselect.py: {e}',file=sys.stderr);raise SystemExit(1)

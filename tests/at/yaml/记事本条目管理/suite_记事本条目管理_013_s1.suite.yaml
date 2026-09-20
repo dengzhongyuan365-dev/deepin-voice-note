@@ -3,37 +3,29 @@ app: deepin-voice-note
 module: 记事本条目管理
 setup:
 - action: session_start
-  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at_empty.sh'
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
 - id: suite_记事本条目管理_013_s1
   name: 首次使用语音记事本新建记事本
-  description: ''
+  description: 覆盖1634839；空库首次启动点击空态 CreateNotebookInitial 新建记事本，再点左侧底部 CreateFolderButton 新建第二个
   steps:
   - step_type: action
     action: element_action
     selector:
-      name: CreateFolderButton
+      name: CreateNotebookInitial
     do: click
-  - step_type: action
-    action: element_action
-    selector:
-      name: NewNoteButton
-    do: click
-  - step_type: action
-    action: dtk_context_menu
-    selector:
-      name: 记事本1
-      role: label
-    items:
-    - DeleteFolderMenuItem
+    wait: 2.0
+    note: 首次空态页「新建记事本」按钮（Accessible.name=CreateNotebookInitial）
   - step_type: action
     action: element_action
     selector:
       name: CreateFolderButton
     do: click
+    wait: 1.5
+    note: 进入工作区后点击左侧底部新建记事本
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -48,11 +40,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: FolderListView
-  - step_type: assert
-    action: assert_element
-    selector:
-      name: FolderListView

@@ -123,19 +123,26 @@ def _wait_for_name(root, name: str, timeout: float, visible: bool = False):
 def _process_running(app_name: str) -> bool:
     """Return whether the real application process still exists.
 
-    The title-bar close action is asynchronous on some DTK versions; the
-    window can disappear before the process has finished its event-loop
-    shutdown.  This is a synchronization check only, not a process kill.
+    Match executable basename via /proc only.  Avoid `pgrep -f` on the full
+    command line: the project path contains `deepin-voice-note`, and YouQu's
+    assert_process_not_running uses a different `ps|grep` filter — a mismatch
+    can make this helper exit 0 while the later assert still sees the app.
     """
-    import subprocess
+    import os
 
-    result = subprocess.run(
-        ["pgrep", "-f", rf"(^|/){app_name}($|\s)"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            raw = open(f"/proc/{entry}/cmdline", "rb").read()
+        except (OSError, PermissionError):
+            continue
+        if not raw:
+            continue
+        argv0 = raw.split(b"\0", 1)[0].decode(errors="ignore")
+        if os.path.basename(argv0) == app_name:
+            return True
+    return False
 
 
 def _wait_process_stopped(app_name: str, timeout: float) -> None:
@@ -192,6 +199,7 @@ def main() -> int:
             raise
         if args.select == "ExitMenuItem":
             _wait_process_stopped(args.app, args.timeout)
+            return 0
         if args.wait_visible:
             app = _find_app(args.app)
             _wait_for_name(app, args.wait_visible, args.timeout, visible=True)

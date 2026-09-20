@@ -230,7 +230,8 @@ suites:
       name: NoteContentWebView
   - step_type: assert
     action: assert_file_exists
-    path: /tmp/vnote_custom_path.txt
+    path: /tmp/
+    name: vnote_custom_path.txt
 - id: suite_文本笔记详情页_018_s1
   name: 默认保存至桌面保存为TXT
   description: ''
@@ -279,7 +280,8 @@ suites:
       name: NoteContentWebView
   - step_type: assert
     action: assert_file_exists
-    path: /tmp/vnote_default_save.txt
+    path: /tmp/
+    name: vnote_default_save.txt
 - id: suite_文本笔记详情页_020_s1
   name: 重命名文本笔记清空输入框
   description: ''

@@ -62,6 +62,7 @@ suites:
       name: NoteContentWebView
   - step_type: assert
     action: assert_file_exists
-    path: /tmp/vnote_default_save.txt
+    path: /tmp/
+    name: vnote_default_save.txt
   skip: requires nested QML context-menu selection (保存笔记 -> 保存为TXT); current YouQu
     menu navigator times out on this submenu

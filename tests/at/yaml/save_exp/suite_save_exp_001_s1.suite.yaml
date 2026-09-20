@@ -25,20 +25,22 @@ suites:
     action: keyboard_type
     text: 详情页保存测试内容
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为TXT'
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为TXT --index 0 --timeout 15'
     wait: 1.0
   - step_type: action
     action: file_dialog_select
-    path: /tmp/detail_note.txt
+    path: /tmp/
+    name: detail_note.txt
     wait: 3.0
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为HTML'
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_save_as.py 保存为HTML --index 0 --timeout 15'
     wait: 1.0
   - step_type: action
     action: file_dialog_select
-    path: /tmp/detail_note.html
+    path: /tmp/
+    name: detail_note.html
     wait: 3.0
   assert_steps:
   - step_type: assert

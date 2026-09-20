@@ -197,7 +197,8 @@ suites:
       name: NoteContentWebView
   - step_type: assert
     action: assert_file_exists
-    path: /tmp/search_result_note.txt
+    path: /tmp/
+    name: search_result_note.txt
   - step_type: assert
     action: assert_file_exists
     path: /tmp/search_result_voice.mp3
