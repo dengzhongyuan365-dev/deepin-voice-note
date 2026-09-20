@@ -1,6 +1,6 @@
-name: suite_play_voice_003_s1_suite
+name: suite_voice_ai_005_s1_suite
 app: deepin-voice-note
-module: play_voice
+module: voice_ai
 setup:
 - action: session_start
   command: >-
@@ -9,9 +9,9 @@ setup:
 teardown:
 - action: session_stop
 suites:
-- id: suite_play_voice_003_s1
-  name: 播放中_保存流程与编辑
-  description: 覆盖1635089、1635083；录制语音后播放中进入保存语音流程，取消保存后验证语音仍存在并可继续编辑正文
+- id: suite_voice_ai_005_s1
+  name: 录音过程中语音转文字入口
+  description: 覆盖1635031；先录一条语音再开新录音，录音中右键已有语音块尝试「语音转文字」，验证录音条仍在且主界面可用（菜单置灰人工）
   steps:
   - step_type: action
     action: webengine_eval_js
@@ -26,13 +26,11 @@ suites:
           return true;
         })()
     wait: 1.0
-    note: 点击 Tiptap 录音按钮
   - step_type: action
     action: session_start
     command: >-
       bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
     wait: 5.5
-    note: 播放内置音频并录制约5秒
   - step_type: action
     action: element_action
     selector:
@@ -59,57 +57,60 @@ suites:
           });
         })()
     wait: 0.5
-    note: 等待语音块生成
-  - step_type: action
-    action: webengine_mouse_event
-    value:
-      port: 9222
-      target_url_contains: tiptap-editor
-      selector: .voiceBtn
-      button: left
-    wait: 1.0
-    note: 播放语音笔记
-  - step_type: action
-    action: command
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect --timeout 15'
-    wait: 1.0
-    note: 播放中打开笔记右键并点击保存语音
-  - step_type: action
-    action: file_dialog_cancel
-    wait: 1.0
-    note: 取消保存语音目录选择对话框
-  - step_type: action
-    action: wait
-    wait: 5.0
-    note: 等待语音播放自然结束
   - step_type: action
     action: webengine_eval_js
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      timeout: 5
       script: |
         (function(){
-          const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
-          if (count < 1) throw new Error('voice block missing after save flow');
-          return {voiceCount: count};
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
         })()
-    wait: 0.5
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音转文字 --timeout 6 || true'
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
   - step_type: action
     action: element_action
     selector:
-      name: TiptapWebView
+      name: StopButton
     do: click
-    wait: 0.5
-  - step_type: action
-    action: keyboard_type
-    text: play_edit_001
-    wait: 0.5
+    wait: 2.0
   assert_steps:
-  - step_type: assert
-    action: assert_process_running
-    process: deepin-voice-note
   - step_type: assert
     action: assert_element
     selector:
       name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: VoiceToText menu likely disabled while recording; grayed state needs manual check

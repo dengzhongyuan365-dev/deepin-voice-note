@@ -1,4 +1,4 @@
-name: suite_search_ops_002_s1_suite
+name: suite_search_ops_005_s1_suite
 app: deepin-voice-note
 module: search_ops
 setup:
@@ -8,9 +8,9 @@ setup:
 teardown:
 - action: session_stop
 suites:
-- id: suite_search_ops_002_s1
-  name: 搜索结果_删除匹配项
-  description: 覆盖1635203、1635191；搜索结果页右键笔记删除单条后结果数量减少，删除所有后搜索结果页显示无结果
+- id: suite_search_ops_005_s1
+  name: 搜索结果_重命名匹配与不匹配关键字
+  description: 覆盖1635189；搜索有结果后右键重命名文本笔记（关键字匹配与不匹配各一次），验证主窗口与列表仍可用
   steps:
   - step_type: action
     action: element_action
@@ -25,11 +25,11 @@ suites:
     wait: 0.3
   - step_type: action
     action: keyboard_type
-    text: search_delete_001
+    text: search_rename_kw
     wait: 0.5
   - step_type: action
     action: session_start
-    command: bash -lc './tests/at/scripts/focus_search_and_query.py search_delete_001'
+    command: bash -lc './tests/at/scripts/focus_search_and_query.py search_rename_kw'
     wait: 1.0
   - step_type: action
     action: dtk_context_menu
@@ -38,15 +38,16 @@ suites:
       name: 文本
       role: list item
     items:
-    - 删除
-    wait: 1.0
+    - 重命名
+    wait: 0.8
   - step_type: action
-    action: element_action
-    selector:
-      name: ConfirmButton
-      role: button
-    do: click
-    wait: 1.0
+    action: keyboard_type
+    text: search_rename_kw
+    wait: 0.4
+  - step_type: action
+    action: keyboard_press
+    key: Return
+    wait: 0.8
   - step_type: action
     action: dtk_context_menu
     selector:
@@ -54,15 +55,16 @@ suites:
       name: 文本
       role: list item
     items:
-    - 删除
-    wait: 1.0
+    - 重命名
+    wait: 0.8
   - step_type: action
-    action: element_action
-    selector:
-      name: ConfirmButton
-      role: button
-    do: click
-    wait: 1.0
+    action: keyboard_type
+    text: rename_nomatch_001
+    wait: 0.4
+  - step_type: action
+    action: keyboard_press
+    key: Return
+    wait: 0.8
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -72,7 +74,5 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: requires pre-existing notes containing "search_delete_001" in search results;
-    "删除所有文本笔记" menu item does not exist in source (NoteCtxMenu only has "删除");
-    search box lacks Accessible.name and uses AT-SPI helper script; delete confirmation
-    dialog and result count verification depend on runtime AT-SPI state
+  skip: search box lacks Accessible.name and uses AT-SPI helper; rename dialog and
+    search-result refresh after keyword mismatch depend on runtime AT-SPI state

@@ -13,7 +13,7 @@ teardown:
 suites:
 - id: suite_play_voice_001_s1
   name: 播放暂停与Space快捷键
-  description: 录制语音后验证播放/暂停按钮及 Space 快捷键切换
+  description: 覆盖1676289、1676291；录制语音后验证播放/暂停按钮及 Space 快捷键切换
   steps:
   - step_type: action
     action: webengine_eval_js
@@ -94,7 +94,7 @@ suites:
       name: TiptapWebView
 - id: suite_play_voice_002_s1
   name: 右键菜单_保存复制剪切删除
-  description: 录制语音后通过语音块真实右键菜单覆盖复制、剪切、粘贴、保存为MP3和删除链路
+  description: 覆盖1676277、1676279、1676285、1676287；录制语音后通过语音块真实右键菜单覆盖复制、剪切、粘贴、保存为MP3和删除链路
   steps:
   - step_type: action
     action: command
@@ -242,7 +242,7 @@ suites:
     path: /tmp/voice_item.mp3
 - id: suite_play_voice_003_s1
   name: 播放中_保存流程与编辑
-  description: 录制语音后播放中进入保存语音流程，取消保存后验证语音仍存在并可继续编辑正文
+  description: 覆盖1635089、1635083；录制语音后播放中进入保存语音流程，取消保存后验证语音仍存在并可继续编辑正文
   steps:
   - step_type: action
     action: webengine_eval_js
@@ -334,7 +334,7 @@ suites:
       name: TiptapWebView
 - id: suite_play_voice_004_s1
   name: 切换播放对象与右键其他记事本
-  description: 录制两条语音后切换播放对象，并在播放过程中打开记事本右键菜单验证状态
+  description: 覆盖1635081、1635067、1635071、1635073；录制两条语音后切换播放对象，并在播放过程中打开记事本右键菜单验证状态
   steps:
   - step_type: action
     action: webengine_eval_js
@@ -537,3 +537,552 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
+- id: suite_play_voice_006_s1
+  name: 录音暂停继续与完成
+  description: 覆盖1676299、1676297、1676295、1634897；开始录音后暂停、继续，再完成录音，验证录音条与语音块生成（列表时间置顶人工）
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 8s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 8s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: StopButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: PauseButton
+    do: click
+    wait: 1.0
+    note: 录音过程中暂停
+  - step_type: action
+    action: element_action
+    selector:
+      name: PauseButton
+    do: click
+    wait: 1.0
+    note: 暂停后继续录音
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+    note: 完成录音
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: pause/continue icon color and list modify-time reorder need visual check
+- id: suite_play_voice_007_s1
+  name: 录音过程中新建编辑与右键笔记
+  description: 覆盖1635021、1635023、1635025、1635033；录音过程中点击新建笔记、编辑正文、右键当前/其他笔记，验证录音条仍在且主界面可用（置灰态人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.6
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: rec_other_note_seed
+    wait: 0.4
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.6
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 录音中点击新建（产品置灰，断言不崩溃）
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: rec_edit_while_recording
+    wait: 0.4
+    note: 录音中编辑当前文本笔记
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 录音中右键当前笔记，菜单项可见后不点击
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 1 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 录音中右键其他笔记
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  skip: NewNoteButton/menu enabled state during recording needs manual or assert_action_disabled
+- id: suite_play_voice_008_s1
+  name: 录音过程中播放删除与保存MP3入口
+  description: 覆盖1635011、1635027、1635029；先录一条语音再开新录音，录音中尝试播放旧语音与右键删除/保存为MP3入口，验证录音条仍在（置灰人工）
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 再开新录音
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 5
+      script: |
+        (function(){
+          const btn = document.querySelector('.voiceBtn');
+          if (!btn) throw new Error('existing voiceBtn not found');
+          btn.click();
+          return {clickedWhileRecording: true};
+        })()
+    wait: 0.8
+    note: 录音中点击已有语音播放按钮（期望置灰无播放）
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 6 || true'
+    wait: 0.8
+    note: 录音中尝试删除语音（可能置灰）
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 保存为MP3 --timeout 6 || true'
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: play/delete/save-as-mp3 disabled-while-recording is visual; menu click may no-op
+- id: suite_play_voice_009_s1
+  name: 播放过程中新建记事本笔记与删除语音
+  description: 覆盖1635069、1635075、1635077、1635079、1635087；播放中点击新建记事本/笔记、右键笔记、删除当前语音，验证主界面仍可用（置灰人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: play_other_note_seed
+    wait: 0.3
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 1.0
+    note: 开始播放
+  - step_type: action
+    action: element_action
+    selector:
+      name: CreateFolderButton
+    do: click
+    wait: 0.8
+    note: 播放中新建记事本（可能置灰）
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 播放中新建文本笔记（可能置灰）
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 播放中右键当前笔记
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 1 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 播放中右键其他笔记
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 8'
+    wait: 1.0
+    note: 播放中删除当前语音
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  skip: create-folder/new-note disabled-while-playing needs visual; delete-while-play may stop audio
+- id: suite_play_voice_010_s1
+  name: 焦点录音按钮回车开始与播放条回车
+  description: 覆盖1676409、1676407；聚焦详情区后通过录音按钮启动录音并完成；再播放语音后用 Space 切换（播放插件回车入口人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: focus
+    wait: 0.3
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.focus();
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 聚焦并触发录音入口（等价回车开始录音）
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: StopButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceBtn
+      button: left
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: focus
+    wait: 0.3
+  - step_type: action
+    action: keyboard_press
+    key: space
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: space
+    wait: 0.8
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: native Return-on-focused-record-button and play-plugin Enter close path soft-covered
+    via click/Space; exact focus chain may differ by toolkit

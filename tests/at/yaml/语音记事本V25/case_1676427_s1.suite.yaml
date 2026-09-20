@@ -26,5 +26,5 @@ suites:
   assert_steps:
   - action: assert_element
     selector:
-      name: 删除
+      name: ConfirmButton
       role: button

@@ -1,4 +1,4 @@
-name: suite_multi_sel_001_s1_suite
+name: suite_multi_sel_004_s1_suite
 app: deepin-voice-note
 module: multi_sel
 setup:
@@ -8,13 +8,13 @@ setup:
 teardown:
 - action: session_stop
 suites:
-- id: suite_multi_sel_001_s1
-  name: Ctrl与Shift选择和取消选择笔记
-  description: 覆盖1676335、1676329、1676331；创建5条文本笔记后通过Ctrl+click追加选择第三条、Shift+click范围选择第五条，验证多选状态
+- id: suite_multi_sel_004_s1
+  name: Shift范围选中两条笔记
+  description: 覆盖1676331；点击一条笔记后按住Shift再点另一条，验证进入多选工具条
   steps:
   - step_type: action
     action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
+    command: bash -lc './tests/at/scripts/select_two_notes_for_multiselect.py'
     wait: 2.0
   assert_steps:
   - step_type: assert

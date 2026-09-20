@@ -11,7 +11,7 @@ teardown:
 suites:
 - id: case_1676227_s1
   name: 图片右键菜单_复制剪切删除保存
-  description: 插入图片后通过图片右键菜单执行复制、剪切、粘贴、保存入口和删除操作
+  description: 覆盖1676221、1676223、1676225、1676227；插入图片后通过图片右键菜单执行复制、剪切、粘贴、保存入口和删除操作
   steps:
   - action: element_action
     selector:

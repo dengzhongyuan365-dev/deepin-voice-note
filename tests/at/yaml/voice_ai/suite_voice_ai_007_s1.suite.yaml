@@ -1,0 +1,73 @@
+name: suite_voice_ai_007_s1_suite
+app: deepin-voice-note
+module: voice_ai
+setup:
+- action: session_start
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_voice_ai_007_s1
+  name: 网络异常时语音转文字提示
+  description: 覆盖1679637；录音后临时关闭网络再触发语音转文字，验证出现确认弹窗或流程不崩溃（无网提示文案人工）
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: command
+    command: bash -lc 'nmcli networking off 2>/dev/null || true; sleep 1'
+    wait: 1.5
+    note: 尽量关闭网络以触发无网提示（无权限时跳过）
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音转文字
+      role: menu item
+    do: click
+    wait: 3.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py ConfirmButton --timeout 5 || true; nmcli networking on 2>/dev/null || true'
+    wait: 1.5
+    note: 若弹出无网确认框则点确认，并恢复网络
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: nmcli networking off may require privileges; dialog text assertion is manual when network stays on

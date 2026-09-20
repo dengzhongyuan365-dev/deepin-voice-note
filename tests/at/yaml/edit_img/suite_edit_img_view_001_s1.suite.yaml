@@ -1,0 +1,69 @@
+name: suite_edit_img_view_001_s1_suite
+app: deepin-voice-note
+module: edit_img
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_edit_img_view_001_s1
+  name: 图片右键查看入口
+  description: 覆盖1676229；插入图片后右键打开菜单并点击「查看」，随后关闭预览，验证编辑器仍可用
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: TiptapWebView
+    do: click
+    wait: 0.3
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 15
+      script: |
+        (function(){
+          const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGP4z8DwH4QZYAwAR8oH+WdZbrcAAAAASUVORK5CYII=';
+          const editor = window.__dvnTiptapEditor;
+          if (!editor) throw new Error('Tiptap editor not found');
+          const ok = editor.chain().focus().setImage({src: dataUrl, relPath: 'atut-view-image.png'}).run();
+          const count = document.querySelectorAll('img[data-rel-path]').length;
+          if (!ok || count < 1) throw new Error('image not inserted');
+          return {imageCount: count};
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: img[data-rel-path]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: 查看
+      role: menu item
+    do: click
+    wait: 1.5
+  - step_type: action
+    action: keyboard_hot_key
+    key: Escape
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: image preview window may be external viewer; Escape/Alt+F4 best-effort close

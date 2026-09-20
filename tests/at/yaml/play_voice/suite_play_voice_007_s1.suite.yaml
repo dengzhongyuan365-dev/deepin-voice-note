@@ -1,0 +1,113 @@
+name: suite_play_voice_007_s1_suite
+app: deepin-voice-note
+module: play_voice
+setup:
+- action: session_start
+  command: >-
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_play_voice_007_s1
+  name: 录音过程中新建编辑与右键笔记
+  description: 覆盖1635021、1635023、1635025、1635033；录音过程中点击新建笔记、编辑正文、右键当前/其他笔记，验证录音条仍在且主界面可用（置灰态人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.6
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: rec_other_note_seed
+    wait: 0.4
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.6
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 录音中点击新建（产品置灰，断言不崩溃）
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: rec_edit_while_recording
+    wait: 0.4
+    note: 录音中编辑当前文本笔记
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 录音中右键当前笔记，菜单项可见后不点击
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 1 --expect 重命名 --timeout 10'
+    wait: 1.0
+    note: 录音中右键其他笔记
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  skip: NewNoteButton/menu enabled state during recording needs manual or assert_action_disabled

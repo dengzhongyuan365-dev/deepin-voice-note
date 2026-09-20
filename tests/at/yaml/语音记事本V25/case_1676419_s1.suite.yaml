@@ -25,7 +25,7 @@ suites:
   - step_type: assert
     action: assert_element
     selector:
-      name: 删除
+      name: ConfirmButton
       role: button
     note: 删除确认弹窗确认按钮文案为「删除」
   - step_type: assert

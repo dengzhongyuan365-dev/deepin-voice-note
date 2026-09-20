@@ -103,7 +103,7 @@ suites:
   - step_type: action
     action: element_action
     selector:
-      name: 删除
+      name: ConfirmButton
       role: button
     do: click
     wait: 1.0
@@ -119,7 +119,7 @@ suites:
   - step_type: action
     action: element_action
     selector:
-      name: 删除
+      name: ConfirmButton
       role: button
     do: click
     wait: 1.0
@@ -250,3 +250,110 @@ suites:
   skip: requires negative assertion (assert_element_not_found) for "录音" button and
     "新建语音记事" entry which YouQu framework does not support; search box lacks Accessible.name
     and uses AT-SPI helper script
+- id: suite_search_ops_005_s1
+  name: 搜索结果_重命名匹配与不匹配关键字
+  description: 覆盖1635189；搜索有结果后右键重命名文本笔记（关键字匹配与不匹配各一次），验证主窗口与列表仍可用
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: search_rename_kw
+    wait: 0.5
+  - step_type: action
+    action: session_start
+    command: bash -lc './tests/at/scripts/focus_search_and_query.py search_rename_kw'
+    wait: 1.0
+  - step_type: action
+    action: dtk_context_menu
+    selector:
+      parent: NoteItemListView
+      name: 文本
+      role: list item
+    items:
+    - 重命名
+    wait: 0.8
+  - step_type: action
+    action: keyboard_type
+    text: search_rename_kw
+    wait: 0.4
+  - step_type: action
+    action: keyboard_press
+    key: Return
+    wait: 0.8
+  - step_type: action
+    action: dtk_context_menu
+    selector:
+      parent: NoteItemListView
+      name: 文本
+      role: list item
+    items:
+    - 重命名
+    wait: 0.8
+  - step_type: action
+    action: keyboard_type
+    text: rename_nomatch_001
+    wait: 0.4
+  - step_type: action
+    action: keyboard_press
+    key: Return
+    wait: 0.8
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  skip: search box lacks Accessible.name and uses AT-SPI helper; rename dialog and
+    search-result refresh after keyword mismatch depend on runtime AT-SPI state
+- id: suite_search_ops_006_s1
+  name: 搜索结果_新建笔记菜单置灰入口可见
+  description: 覆盖1635197；搜索有结果后右键笔记，验证「新建笔记」菜单项仍出现在右键菜单中（产品在搜索态置灰不可用）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: search_newnote_disabled_001
+    wait: 0.5
+  - step_type: action
+    action: session_start
+    command: bash -lc './tests/at/scripts/focus_search_and_query.py search_newnote_disabled_001'
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 新建笔记 --timeout 12'
+    wait: 1.0
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  skip: product disables NoteAddNew while isSearching; AT asserts menu item presence
+    only (enabled/grayed state not expressible without assert_action_disabled); search
+    box lacks Accessible.name

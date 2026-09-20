@@ -60,7 +60,7 @@ suites:
     path: /tmp/detail_note.html
 - id: suite_save_exp_002_s1
   name: 语音保存_当前笔记全部语音
-  description: 录制语音后通过笔记列表真实右键菜单打开保存语音入口，关闭后再次打开确保无异常
+  description: 覆盖1634945、1634947、1676343；录制语音后通过笔记列表真实右键菜单打开保存语音入口，关闭后再次打开确保无异常
   steps:
   - step_type: action
     action: webengine_eval_js
@@ -221,3 +221,84 @@ suites:
     action: assert_element
     selector:
       name: TiptapWebView
+- id: suite_save_exp_005_s1
+  name: 修改保存路径后保存语音
+  description: 覆盖1634949；录制语音后右键「保存语音」，选择自定义目录与文件名完成保存，验证目标文件存在
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc 'rm -rf /tmp/vn_save_voice_custom && mkdir -p /tmp/vn_save_voice_custom'
+    wait: 0.2
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+    note: 点击 Tiptap 录音按钮
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+    note: 播放内置音频并录制约5秒
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+    note: 等待语音块生成
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect --timeout 15'
+    wait: 1.5
+    note: 笔记列表右键打开保存语音
+  - step_type: action
+    action: file_dialog_select
+    path: /tmp/vn_save_voice_custom/
+    name: custom_path_voice.mp3
+    wait: 3.0
+    note: 修改保存路径到自定义目录
+  assert_steps:
+  - step_type: assert
+    action: assert_file_exists
+    path: /tmp/vn_save_voice_custom/
+    name: custom_path_voice.mp3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  skip: file dialog path navigation depends on DTK file chooser AT-SPI; voice recording
+    requires audio sink/monitor and QTWEBENGINE_REMOTE_DEBUGGING

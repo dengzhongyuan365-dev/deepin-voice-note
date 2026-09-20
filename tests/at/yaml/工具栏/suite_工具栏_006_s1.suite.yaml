@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_工具栏_006_s1
   name: 工具栏-关闭主界面
-  description: ''
+  description: 覆盖1676445；通过 Alt+F4 关闭主界面，验证进程退出
   steps:
   - step_type: action
     action: keyboard_hot_key

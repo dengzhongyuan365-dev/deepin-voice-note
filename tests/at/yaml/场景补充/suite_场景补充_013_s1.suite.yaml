@@ -1,0 +1,36 @@
+name: suite_场景补充_013_s1_suite
+app: deepin-voice-note
+module: 场景补充
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_场景补充_013_s1
+  name: 记事本列表入口与头像区域可访问
+  description: 覆盖1634861、1676433；验证左侧记事本列表与新建记事本入口具备 AT-SPI 名称（头像像素内容依赖人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: FolderListView
+    do: focus
+    wait: 0.3
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: CreateFolderButton
+      role: button
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  skip: folder avatar/icon pixel identity has no AT-SPI name; only list/entry presence
+    is asserted

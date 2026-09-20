@@ -1,0 +1,68 @@
+name: suite_voice_ai_008_s1_suite
+app: deepin-voice-note
+module: voice_ai
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_voice_ai_008_s1
+  name: 语音朗读入口在无可用输出时仍可触发
+  description: 覆盖1873455、兼补强1676463；切换到 null 输出后触发文本朗读入口，验证编辑器仍可用且进程不崩溃（无声/提示人工）
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc 'pactl load-module module-null-sink sink_name=at_null_tts 2>/dev/null || true; pactl set-default-sink at_null_tts 2>/dev/null || true'
+    wait: 0.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: 无音频设备朗读测试
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: ctrl+a
+    wait: 0.4
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
+    wait: 1.0
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: command
+    command: bash -lc 'SINK=$(pactl list short sinks | awk '\''$2 != "at_null_tts" && $2 != "null-sink" {print $2; exit}'\''); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; fi'
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: menu label may be 语音朗读/文字转语音 by locale; missing-device toast needs manual check

@@ -1,6 +1,6 @@
 name: 压力测试(#115107)_case_1635299_s1_suite
 app: deepin-voice-note
-description: ''
+description: 覆盖1635299；打开应用后右键记事本触发删除入口并确认，验证主界面仍可用
 module: 压力测试(#115107)
 tags: []
 fast_fail: false
@@ -14,22 +14,25 @@ teardown:
 suites:
 - id: case_1635299_s1
   name: 打开语音记事本
-  description: ''
+  description: 右键记事本打开删除菜单并确认（ConfirmButton），验证主界面控件仍在
   tags: []
   steps:
-  - action: dtk_context_menu
-    selector:
-      name: 记事本1
-      role: label
-    items:
-    - DeleteFolderMenuItem
+  - action: command
+    command: bash -lc './tests/at/scripts/open_folder_context_menu.py --expect DeleteFolderMenuItem --click-expect --wait-confirm --timeout 12'
+    wait: 2.0
+    note: 按 FolderListView 可见项右键并点击 DeleteFolderMenuItem，等待 ConfirmButton
   - action: element_action
     selector:
-      name: 删除
+      name: ConfirmButton
       role: button
     do: click
+    wait: 1.0
+    note: 删除确认框稳定 AT-SPI 名为 ConfirmButton（可见文案多为「删除」）
   assert_steps:
   - action: assert_element
     selector:
       name: CreateFolderButton
       role: button
+  - action: assert_element
+    selector:
+      name: VoiceNoteMainWindow

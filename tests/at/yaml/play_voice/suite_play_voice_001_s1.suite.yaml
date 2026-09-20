@@ -11,7 +11,7 @@ teardown:
 suites:
 - id: suite_play_voice_001_s1
   name: 播放暂停与Space快捷键
-  description: 录制语音后验证播放/暂停按钮及 Space 快捷键切换
+  description: 覆盖1676289、1676291；录制语音后验证播放/暂停按钮及 Space 快捷键切换
   steps:
   - step_type: action
     action: webengine_eval_js

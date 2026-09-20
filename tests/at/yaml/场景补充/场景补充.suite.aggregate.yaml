@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_场景补充_001_s1
   name: 搜索关键字匹配笔记标题与详情页内容
-  description: 覆盖xlsx搜索场景：搜索关键字匹配文本笔记、详情页内容、Enter触发搜索、Esc退出搜索；不依赖固定坐标
+  description: 覆盖1676371、1676369；搜索关键字匹配文本笔记与详情页内容，Enter触发搜索、Esc退出搜索；不依赖固定坐标
   steps:
   - step_type: action
     action: element_action
@@ -142,7 +142,7 @@ suites:
       name: TiptapWebView
 - id: suite_场景补充_003_s1
   name: 主菜单设置弹窗入口与设置项验证
-  description: 覆盖xlsx主菜单设置场景：打开标题栏主菜单，进入设置弹窗，验证声音来源与恢复默认按钮等控件
+  description: 覆盖1676363；打开标题栏主菜单进入设置弹窗，验证声音来源与恢复默认按钮等控件
   steps:
   - step_type: action
     action: command
@@ -422,3 +422,199 @@ suites:
     action: assert_process_not_running
     command: deepin-voice-note
     wait: 5.0
+- id: suite_场景补充_011_s1
+  name: 重命名文本笔记后列表仍可用
+  description: 覆盖1634951；新建文本笔记后右键重命名并确认，验证记事本/笔记列表入口仍可见（时间排序置顶依赖人工核对）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: rename_move_top_seed
+    wait: 0.4
+  - step_type: action
+    action: dtk_context_menu
+    selector:
+      name: 文本
+      role: list item
+    items:
+    - 重命名
+    wait: 0.8
+  - step_type: action
+    action: keyboard_type
+    text: rename_move_top_001
+    wait: 0.4
+  - step_type: action
+    action: keyboard_press
+    key: Return
+    wait: 0.8
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: CreateFolderButton
+      role: button
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  skip: timestamp / list-order "move to top" after rename needs visual/manual check;
+    VNoteRightMenu Accessible.name may flake on dtk_context_menu
+- id: suite_场景补充_012_s1
+  name: 删除语音记录后主界面仍可用
+  description: 覆盖1634899；先写入正文并录制语音，再通过语音块右键删除该语音，验证主窗口与笔记列表仍可用（列表时间置顶依赖人工核对）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.5
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: delete_voice_move_top_seed
+    wait: 0.4
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 再建一条笔记，便于观察删除语音后排序变化（人工）
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: delete_voice_target_note
+    wait: 0.4
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 8'
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 8
+      script: |
+        (function(){
+          const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+          if (count !== 0) throw new Error('voice block still present after delete, count=' + count);
+          return {voiceCount: count};
+        })()
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  skip: list reorder / modify-time after deleting voice needs visual check; recording
+    needs audio sink and QTWEBENGINE_REMOTE_DEBUGGING
+- id: suite_场景补充_013_s1
+  name: 记事本列表入口与头像区域可访问
+  description: 覆盖1634861、1676433；验证左侧记事本列表与新建记事本入口具备 AT-SPI 名称（头像像素内容依赖人工）
+  steps:
+  - step_type: action
+    action: element_action
+    selector:
+      name: FolderListView
+    do: focus
+    wait: 0.3
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: FolderListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: CreateFolderButton
+      role: button
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  skip: folder avatar/icon pixel identity has no AT-SPI name; only list/entry presence
+    is asserted

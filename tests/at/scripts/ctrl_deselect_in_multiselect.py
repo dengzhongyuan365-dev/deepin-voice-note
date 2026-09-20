@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Create five notes and enter multi-select via AT-SPI + xdotool.
+"""Enter multi-select with 3 notes, then Ctrl+click one selected row to deselect.
 
-Standalone helper: no YouQu/Dogtail import. Suites invoke via `action: command`.
+Standalone AT-SPI helper: no YouQu/Dogtail import. Suites invoke via `action: command`.
+After deselecting one of three, MultipleChoicesView should remain visible.
 """
 from __future__ import annotations
 
@@ -155,14 +156,13 @@ def _click_extents(ext, modifiers=()) -> None:
     finally:
         for key in reversed(tuple(modifiers)):
             subprocess.run(["xdotool", "keyup", key], check=True)
-    time.sleep(0.35)
+    time.sleep(0.4)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", default="deepin-voice-note")
-    parser.add_argument("--timeout", type=float, default=15.0)
-    parser.add_argument("--count", type=int, default=5, help="notes to create before multi-select")
+    parser.add_argument("--timeout", type=float, default=12.0)
     args = parser.parse_args()
 
     try:
@@ -171,35 +171,37 @@ def main() -> int:
         pass
 
     app = _find_app(args.app)
-    new_btn = _wait_named(app, "NewNoteButton", args.timeout, visible=True)
-    for _ in range(max(1, args.count)):
+    for _ in range(3):
+        new_btn = _wait_named(app, "NewNoteButton", args.timeout, visible=True)
         _press(new_btn)
         time.sleep(0.45)
         app = _find_app(args.app)
-        new_btn = _wait_named(app, "NewNoteButton", args.timeout, visible=True)
 
     deadline = time.time() + args.timeout
     items = []
     while time.time() < deadline:
         app = _find_app(args.app)
         items = _visible_note_items(app)
-        if len(items) >= 5:
+        if len(items) >= 3:
             break
         time.sleep(0.2)
-    if len(items) < 5:
-        raise RuntimeError(f"need at least five visible note items, got {len(items)}")
+    if len(items) < 3:
+        raise RuntimeError(f"need at least three visible note items, got {len(items)}")
 
     first = _extents(items[0])
     third = _extents(items[2])
-    fifth = _extents(items[4])
-    if first is None or third is None or fifth is None:
+    second = _extents(items[1])
+    if first is None or second is None or third is None:
         raise RuntimeError("selected note rows are not visible")
 
     _click_extents(first)
-    _click_extents(third, modifiers=("Control_L",))
-    _click_extents(fifth, modifiers=("Shift_L",))
+    _click_extents(third, modifiers=("Shift_L",))
     _wait_named(_find_app(args.app), "MultipleChoicesView", args.timeout, visible=True)
-    print("multi-selected five notes via AT-SPI", flush=True)
+
+    # Ctrl+click a selected middle row to cancel that selection; multi-select remains.
+    _click_extents(second, modifiers=("Control_L",))
+    _wait_named(_find_app(args.app), "MultipleChoicesView", args.timeout, visible=True)
+    print("ctrl-deselected one note; MultipleChoicesView still visible", flush=True)
     return 0
 
 
@@ -207,5 +209,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(f"multi_select_five_notes.py: {exc}", file=sys.stderr)
+        print(f"ctrl_deselect_in_multiselect.py: {exc}", file=sys.stderr)
         raise SystemExit(1)

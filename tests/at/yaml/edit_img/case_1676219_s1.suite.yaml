@@ -14,7 +14,7 @@ teardown:
 suites:
 - id: case_1676219_s1
   name: 编辑区右键菜单_空白与未选中文本菜单
-  description: '右键正文编辑区空白处弹出菜单，关闭后再次右键，验证菜单项不含文本翻译'
+  description: '右键正文编辑区空白处弹出菜单，关闭后再次右键，验证菜单项不含文本翻译（覆盖1676219、1676217、1873449）'
   tags: []
   steps:
   - action: element_action

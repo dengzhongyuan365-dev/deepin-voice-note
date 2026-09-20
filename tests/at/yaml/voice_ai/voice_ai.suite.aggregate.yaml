@@ -457,3 +457,330 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
+- id: suite_voice_ai_005_s1
+  name: 录音过程中语音转文字入口
+  description: 覆盖1635031；先录一条语音再开新录音，录音中右键已有语音块尝试「语音转文字」，验证录音条仍在且主界面可用（菜单置灰人工）
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 20
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 15000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音转文字 --timeout 6 || true'
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: VoiceToText menu likely disabled while recording; grayed state needs manual check
+- id: suite_voice_ai_006_s1
+  name: 删除语音同步清理转写文案
+  description: 覆盖1676441；录音并触发语音转文字后删除该语音块，验证转写文案节点同步消失
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音转文字
+      role: menu item
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 60
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 55000;
+            function poll(){
+              const textEl = document.querySelector('.translateText');
+              const text = textEl ? (textEl.innerText || textEl.textContent || '').trim() : '';
+              if (text) return resolve({transcriptLength: text.length});
+              if (Date.now() > deadline) return reject(new Error('transcript text not generated'));
+              setTimeout(poll, 500);
+            }
+            poll();
+          });
+        })()
+    wait: 1.0
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 8'
+    wait: 1.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 10
+      script: |
+        (function(){
+          const voiceCount = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+          const transcript = document.querySelector('.translateText');
+          const text = transcript ? (transcript.innerText || transcript.textContent || '').trim() : '';
+          if (voiceCount !== 0) throw new Error('voice block still present after delete');
+          if (text) throw new Error('transcript text still present after voice delete');
+          return {voiceCount: voiceCount, transcriptCleared: true};
+        })()
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: requires working AI/network for transcript generation before delete
+- id: suite_voice_ai_007_s1
+  name: 网络异常时语音转文字提示
+  description: 覆盖1679637；录音后临时关闭网络再触发语音转文字，验证出现确认弹窗或流程不崩溃（无网提示文案人工）
+  steps:
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      script: |
+        (function(){
+          const btn = document.querySelector('button[data-format="insertVoice"]');
+          if (!btn) throw new Error('insertVoice button not found');
+          btn.click();
+          return true;
+        })()
+    wait: 1.0
+  - step_type: action
+    action: session_start
+    command: >-
+      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
+    wait: 5.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: StopButton
+    do: click
+    wait: 2.0
+  - step_type: action
+    action: command
+    command: bash -lc 'nmcli networking off 2>/dev/null || true; sleep 1'
+    wait: 1.5
+    note: 尽量关闭网络以触发无网提示（无权限时跳过）
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .voiceInfoBox[data-type="voice-block"]
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: 语音转文字
+      role: menu item
+    do: click
+    wait: 3.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py ConfirmButton --timeout 5 || true; nmcli networking on 2>/dev/null || true'
+    wait: 1.5
+    note: 若弹出无网确认框则点确认，并恢复网络
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: nmcli networking off may require privileges; dialog text assertion is manual when network stays on
+- id: suite_voice_ai_008_s1
+  name: 语音朗读入口在无可用输出时仍可触发
+  description: 覆盖1873455、兼补强1676463；切换到 null 输出后触发文本朗读入口，验证编辑器仍可用且进程不崩溃（无声/提示人工）
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc 'pactl load-module module-null-sink sink_name=at_null_tts 2>/dev/null || true; pactl set-default-sink at_null_tts 2>/dev/null || true'
+    wait: 0.5
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: 无音频设备朗读测试
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    selector:
+      name: TiptapWebView
+    key: ctrl+a
+    wait: 0.4
+  - step_type: action
+    action: webengine_mouse_event
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: right
+    wait: 1.0
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
+    wait: 1.0
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.3
+  - step_type: action
+    action: command
+    command: bash -lc 'SINK=$(pactl list short sinks | awk '\''$2 != "at_null_tts" && $2 != "null-sink" {print $2; exit}'\''); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; fi'
+    wait: 0.5
+  assert_steps:
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: TiptapWebView
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  skip: menu label may be 语音朗读/文字转语音 by locale; missing-device toast needs manual check

@@ -130,12 +130,35 @@ def _right_click_center(node) -> None:
     time.sleep(0.4)
 
 
+def _press(node) -> None:
+    try:
+        n_actions = node.get_n_actions()
+    except Exception as exc:
+        raise RuntimeError(f"node has no actions: {_name(node)}") from exc
+    if n_actions <= 0:
+        raise RuntimeError(f"node action count is 0: {_name(node)}")
+    for i in range(n_actions):
+        try:
+            if (node.get_action_name(i) or "").lower() == "press":
+                node.do_action(i)
+                return
+        except Exception:
+            continue
+    node.do_action(0)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", default="deepin-voice-note")
     parser.add_argument("--expect", default="RenameMenuItem")
     parser.add_argument("--index", type=int, default=0)
     parser.add_argument("--close", action="store_true")
+    parser.add_argument("--click-expect", action="store_true", help="Press the expected menu item")
+    parser.add_argument(
+        "--wait-confirm",
+        action="store_true",
+        help="After clicking expect, wait for ConfirmButton (delete dialog)",
+    )
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
 
@@ -154,7 +177,13 @@ def main() -> int:
                 raise RuntimeError("no visible folder item")
             target = items[min(args.index, len(items) - 1)]
             _right_click_center(target)
-            _wait_name(args.app, args.expect, timeout=1.5, visible=True)
+            item = _wait_name(args.app, args.expect, timeout=1.5, visible=True)
+            if args.click_expect:
+                _press(item)
+                print(f"clicked folder menu item via AT-SPI: {args.expect}", flush=True)
+                if args.wait_confirm:
+                    _wait_name(args.app, "ConfirmButton", timeout=5.0, visible=True)
+                    print("ConfirmButton visible after folder delete menu", flush=True)
             if args.close:
                 subprocess.run(["xdotool", "key", "Escape"], check=True)
                 time.sleep(0.2)
