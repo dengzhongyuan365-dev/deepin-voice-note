@@ -32,5 +32,3 @@ suites:
     action: assert_element
     selector:
       name: VoiceNoteMainWindow
-  skip: folder avatar/icon pixel identity has no AT-SPI name; only list/entry presence
-    is asserted

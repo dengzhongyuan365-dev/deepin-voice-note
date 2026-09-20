@@ -65,4 +65,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: menu label may be 语音朗读/文字转语音 by locale; missing-device toast needs manual check

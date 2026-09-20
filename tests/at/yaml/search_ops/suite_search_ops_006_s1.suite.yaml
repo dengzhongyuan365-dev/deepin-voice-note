@@ -44,6 +44,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: product disables NoteAddNew while isSearching; AT asserts menu item presence
-    only (enabled/grayed state not expressible without assert_action_disabled); search
-    box lacks Accessible.name

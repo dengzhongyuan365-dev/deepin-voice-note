@@ -620,7 +620,6 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: pause/continue icon color and list modify-time reorder need visual check
 - id: suite_play_voice_007_s1
   name: 录音过程中新建编辑与右键笔记
   description: 覆盖1635021、1635023、1635025、1635033；录音过程中点击新建笔记、编辑正文、右键当前/其他笔记，验证录音条仍在且主界面可用（置灰态人工）
@@ -722,7 +721,6 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: NewNoteButton/menu enabled state during recording needs manual or assert_action_disabled
 - id: suite_play_voice_008_s1
   name: 录音过程中播放删除与保存MP3入口
   description: 覆盖1635011、1635027、1635029；先录一条语音再开新录音，录音中尝试播放旧语音与右键删除/保存为MP3入口，验证录音条仍在（置灰人工）
@@ -860,7 +858,6 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: play/delete/save-as-mp3 disabled-while-recording is visual; menu click may no-op
 - id: suite_play_voice_009_s1
   name: 播放过程中新建记事本笔记与删除语音
   description: 覆盖1635069、1635075、1635077、1635079、1635087；播放中点击新建记事本/笔记、右键笔记、删除当前语音，验证主界面仍可用（置灰人工）
@@ -993,7 +990,6 @@ suites:
     action: assert_element
     selector:
       name: TiptapWebView
-  skip: create-folder/new-note disabled-while-playing needs visual; delete-while-play may stop audio
 - id: suite_play_voice_010_s1
   name: 焦点录音按钮回车开始与播放条回车
   description: 覆盖1676409、1676407；聚焦详情区后通过录音按钮启动录音并完成；再播放语音后用 Space 切换（播放插件回车入口人工）
@@ -1084,5 +1080,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: native Return-on-focused-record-button and play-plugin Enter close path soft-covered
-    via click/Space; exact focus chain may differ by toolkit

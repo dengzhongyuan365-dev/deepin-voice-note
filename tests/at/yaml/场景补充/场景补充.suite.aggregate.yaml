@@ -471,8 +471,6 @@ suites:
     action: assert_element
     selector:
       name: VoiceNoteMainWindow
-  skip: timestamp / list-order "move to top" after rename needs visual/manual check;
-    VNoteRightMenu Accessible.name may flake on dtk_context_menu
 - id: suite_场景补充_012_s1
   name: 删除语音记录后主界面仍可用
   description: 覆盖1634899；先写入正文并录制语音，再通过语音块右键删除该语音，验证主窗口与笔记列表仍可用（列表时间置顶依赖人工核对）
@@ -590,8 +588,6 @@ suites:
     action: assert_element
     selector:
       name: TiptapWebView
-  skip: list reorder / modify-time after deleting voice needs visual check; recording
-    needs audio sink and QTWEBENGINE_REMOTE_DEBUGGING
 - id: suite_场景补充_013_s1
   name: 记事本列表入口与头像区域可访问
   description: 覆盖1634861、1676433；验证左侧记事本列表与新建记事本入口具备 AT-SPI 名称（头像像素内容依赖人工）
@@ -616,5 +612,3 @@ suites:
     action: assert_element
     selector:
       name: VoiceNoteMainWindow
-  skip: folder avatar/icon pixel identity has no AT-SPI name; only list/entry presence
-    is asserted

@@ -57,5 +57,3 @@ suites:
     action: assert_element
     selector:
       name: VoiceNoteMainWindow
-  skip: timestamp / list-order "move to top" after rename needs visual/manual check;
-    VNoteRightMenu Accessible.name may flake on dtk_context_menu

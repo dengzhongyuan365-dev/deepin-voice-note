@@ -49,6 +49,3 @@ suites:
     action: assert_element
     selector:
       name: NoteContentWebView
-  skip: requires negative assertion (assert_element_not_found) for "录音" button and
-    "新建语音记事" entry which YouQu framework does not support; search box lacks Accessible.name
-    and uses AT-SPI helper script

@@ -23,6 +23,10 @@ suites:
       role: label
     items:
     - NewNoteFromFolderMenuItem
+  - action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
   - action: keyboard_type
     text: 文本
   - action: keyboard_press

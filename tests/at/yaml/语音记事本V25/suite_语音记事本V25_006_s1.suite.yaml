@@ -174,5 +174,3 @@ suites:
     action: assert_element
     selector:
       name: RecordingBar
-  skip: requires audio input/output device; current environment reports Current Audio
-    Cards is Empty

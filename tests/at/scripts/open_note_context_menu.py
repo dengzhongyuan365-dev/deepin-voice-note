@@ -166,7 +166,12 @@ def _right_click(node) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", default="deepin-voice-note")
-    parser.add_argument("--index", type=int, default=0)
+    parser.add_argument(
+        "--index",
+        type=int,
+        default=0,
+        help="0-based row index; negative counts from end (-1 = last visible note)",
+    )
     parser.add_argument("--expect", help="visible menu item name expected after right click")
     parser.add_argument("--click-expect", action="store_true")
     parser.add_argument("--cancel-after", action="store_true")
@@ -184,9 +189,12 @@ def main() -> int:
         try:
             app = _find_app(args.app)
             rows = _visible_note_items(app)
-            if len(rows) <= args.index:
-                raise RuntimeError(f"need visible note item at index {args.index}, got {len(rows)}")
-            _right_click(rows[args.index])
+            idx = args.index if args.index >= 0 else len(rows) + args.index
+            if idx < 0 or idx >= len(rows):
+                raise RuntimeError(
+                    f"need visible note item at index {args.index} (resolved={idx}), got {len(rows)}"
+                )
+            _right_click(rows[idx])
             if not args.expect:
                 return 0
             item = _wait_named(

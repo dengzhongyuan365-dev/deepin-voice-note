@@ -5,7 +5,7 @@ setup:
 - action: session_start
   command: >-
     bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
@@ -19,6 +19,22 @@ suites:
       name: TiptapWebView
     do: focus
     wait: 0.3
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 新建笔记，确保 webVisible/recordBtnEnabled 后再录音
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: at_record_seed
+    wait: 0.4
   - step_type: action
     action: webengine_eval_js
     value:
@@ -34,11 +50,15 @@ suites:
         })()
     wait: 1.0
     note: 聚焦并触发录音入口（等价回车开始录音）
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
   - step_type: action
-    action: session_start
-    command: >-
-      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
-    wait: 5.5
+    action: command
+    command: bash -lc './tests/at/scripts/play_loopback_audio.sh tests/at/fixtures/tengwanggexu.mp3 5'
+    wait: 0.5
+    note: command 播环回音频；禁止 session_start（会覆盖 app_process）
   - step_type: assert
     action: assert_element
     selector:
@@ -99,5 +119,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: native Return-on-focused-record-button and play-plugin Enter close path soft-covered
-    via click/Space; exact focus chain may differ by toolkit

@@ -72,7 +72,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: requires pre-existing notes containing "search_delete_001" in search results;
-    "删除所有文本笔记" menu item does not exist in source (NoteCtxMenu only has "删除");
-    search box lacks Accessible.name and uses AT-SPI helper script; delete confirmation
-    dialog and result count verification depend on runtime AT-SPI state

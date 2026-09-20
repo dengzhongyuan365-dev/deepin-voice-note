@@ -28,17 +28,16 @@ suites:
     text: search_rename_kw
     wait: 0.5
   - step_type: action
-    action: session_start
+    action: command
     command: bash -lc './tests/at/scripts/focus_search_and_query.py search_rename_kw'
+    timeout: 30
+    check: true
     wait: 1.0
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 重命名
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --click-expect --timeout 15'
+    timeout: 40
+    check: true
     wait: 0.8
   - step_type: action
     action: keyboard_type
@@ -49,13 +48,17 @@ suites:
     key: Return
     wait: 0.8
   - step_type: action
-    action: dtk_context_menu
-    selector:
-      parent: NoteItemListView
-      name: 文本
-      role: list item
-    items:
-    - 重命名
+    action: command
+    command: bash -lc './tests/at/scripts/focus_search_and_query.py search_rename_kw'
+    timeout: 30
+    check: true
+    wait: 1.0
+    note: 重命名后重新搜索，保证结果列表仍有可右键项
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --click-expect --timeout 15'
+    timeout: 40
+    check: true
     wait: 0.8
   - step_type: action
     action: keyboard_type
@@ -74,5 +77,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: search box lacks Accessible.name and uses AT-SPI helper; rename dialog and
-    search-result refresh after keyword mismatch depend on runtime AT-SPI state

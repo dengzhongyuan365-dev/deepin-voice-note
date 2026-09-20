@@ -13,9 +13,11 @@ suites:
   description: 覆盖1676335、1676329、1676331；创建5条文本笔记后通过Ctrl+click追加选择第三条、Shift+click范围选择第五条，验证多选状态
   steps:
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
-    wait: 2.0
+    action: command
+    command: bash -lc './tests/at/scripts/multi_select_five_notes.py --timeout 20'
+    timeout: 90
+    check: true
+    wait: 1.0
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -34,9 +36,11 @@ suites:
   description: 覆盖1676327、1676319；多选笔记后验证详情页移动按钮可见，确认多选工具条状态可用
   steps:
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
-    wait: 2.0
+    action: command
+    command: bash -lc './tests/at/scripts/multi_select_five_notes.py --timeout 20'
+    timeout: 90
+    check: true
+    wait: 1.0
   - step_type: assert
     action: assert_element
     selector:
@@ -57,12 +61,16 @@ suites:
   description: 覆盖1676317、1676315、1676311、1676309；多选笔记后打开右键批量菜单，触发删除入口并取消删除
   steps:
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
-    wait: 2.0
+    action: command
+    command: bash -lc './tests/at/scripts/multi_select_five_notes.py --timeout 20'
+    timeout: 90
+    check: true
+    wait: 1.0
   - step_type: action
-    action: session_start
+    action: command
     command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --cancel-after --timeout 15'
+    timeout: 40
+    check: true
     wait: 1.0
   assert_steps:
   - step_type: assert
@@ -74,6 +82,7 @@ suites:
     action: assert_element
     selector:
       name: MultipleChoicesView
+
 - id: suite_multi_sel_004_s1
   name: Shift范围选中两条笔记
   description: 覆盖1676331；点击一条笔记后按住Shift再点另一条，验证进入多选工具条

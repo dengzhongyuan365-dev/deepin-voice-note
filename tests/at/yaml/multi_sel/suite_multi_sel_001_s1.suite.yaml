@@ -13,9 +13,11 @@ suites:
   description: 覆盖1676335、1676329、1676331；创建5条文本笔记后通过Ctrl+click追加选择第三条、Shift+click范围选择第五条，验证多选状态
   steps:
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
-    wait: 2.0
+    action: command
+    command: bash -lc './tests/at/scripts/multi_select_five_notes.py --timeout 20'
+    timeout: 90
+    check: true
+    wait: 1.0
   assert_steps:
   - step_type: assert
     action: assert_element

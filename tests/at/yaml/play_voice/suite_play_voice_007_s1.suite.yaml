@@ -5,7 +5,7 @@ setup:
 - action: session_start
   command: >-
     bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
@@ -47,11 +47,15 @@ suites:
           return true;
         })()
     wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
   - step_type: action
-    action: session_start
-    command: >-
-      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 10s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 10s paplay "$A"; else xdg-open "$A"; fi'
-    wait: 1.0
+    action: command
+    command: bash -lc './tests/at/scripts/play_loopback_audio.sh tests/at/fixtures/tengwanggexu.mp3 10'
+    wait: 0.5
+    note: command 播环回音频；禁止 session_start（会覆盖 app_process）
   - step_type: assert
     action: assert_element
     selector:
@@ -75,18 +79,21 @@ suites:
     note: 录音中编辑当前文本笔记
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --timeout 10'
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 重命名 --timeout 12'
     wait: 1.0
     note: 录音中右键当前笔记，菜单项可见后不点击
   - step_type: action
     action: keyboard_press
     key: Escape
-    wait: 0.3
+    wait: 0.8
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 1 --expect 重命名 --timeout 10'
-    wait: 1.0
-    note: 录音中右键其他笔记
+    command: >-
+      bash -lc 'set +e; ./tests/at/scripts/open_note_context_menu.py --index -1 --expect 重命名 --timeout 3; ec=$?;
+      if [ "$ec" -eq 0 ]; then echo "FAIL: other-note context menu should be blocked while recording" >&2; exit 1; fi;
+      echo "OK: other-note context menu blocked while recording (exit=$ec)"; exit 0'
+    wait: 0.5
+    note: 产品在录音中拦截非当前笔记右键（ItemListView），不应弹出重命名菜单；不崩溃即可
   - step_type: action
     action: keyboard_press
     key: Escape
@@ -110,4 +117,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: NewNoteButton/menu enabled state during recording needs manual or assert_action_disabled

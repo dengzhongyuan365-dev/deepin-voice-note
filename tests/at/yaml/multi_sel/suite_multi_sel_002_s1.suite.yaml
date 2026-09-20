@@ -13,9 +13,11 @@ suites:
   description: 覆盖1676327、1676319；多选笔记后验证详情页移动按钮可见，确认多选工具条状态可用
   steps:
   - step_type: action
-    action: session_start
-    command: bash -lc './tests/at/scripts/multi_select_five_notes.py'
-    wait: 2.0
+    action: command
+    command: bash -lc './tests/at/scripts/multi_select_five_notes.py --timeout 20'
+    timeout: 90
+    check: true
+    wait: 1.0
   - step_type: assert
     action: assert_element
     selector:

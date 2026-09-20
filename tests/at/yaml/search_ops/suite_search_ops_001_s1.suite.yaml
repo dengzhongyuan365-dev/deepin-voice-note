@@ -64,7 +64,3 @@ suites:
     action: assert_element
     selector:
       name: NoteContentWebView
-  skip: search box (SearchEdit, object_name "search") lacks Accessible.name; uses AT-SPI+xdotool
-    helper script (focus_search_and_query.py) to focus, type query and press Enter;
-    special character search and no-result state verification depend on runtime AT-SPI
-    inspection

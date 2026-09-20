@@ -1223,22 +1223,23 @@ Item {
     Connections {
         target: Webobj
 
+        // tiptapWebView 在 Loader.sourceComponent 内，外层只能经 tiptapLoader.item.editor 访问
         onCallJsSelectAll: {
-            if (TiptapChannel.tiptapEnabled && tiptapLoader.item) {
-                tiptapWebView.runJavaScript(
+            if (TiptapChannel.tiptapEnabled && tiptapLoader.item && tiptapLoader.item.editor) {
+                tiptapLoader.item.editor.runJavaScript(
                     "if(window.__dvnTiptapSelectContextAll)window.__dvnTiptapSelectContextAll();" +
                     "else if(window.__dvnTiptapEditor)window.__dvnTiptapEditor.chain().selectAll().run();");
             }
         }
         onCallJsDeleteSelection: {
-            if (TiptapChannel.tiptapEnabled && tiptapLoader.item) {
-                tiptapWebView.runJavaScript(
+            if (TiptapChannel.tiptapEnabled && tiptapLoader.item && tiptapLoader.item.editor) {
+                tiptapLoader.item.editor.runJavaScript(
                     "if(window.__dvnTiptapEditor)window.__dvnTiptapEditor.chain().deleteSelection().run()");
             }
         }
         onCallJsFocusEditor: {
-            if (TiptapChannel.tiptapEnabled && tiptapLoader.item) {
-                tiptapWebView.runJavaScript(
+            if (TiptapChannel.tiptapEnabled && tiptapLoader.item && tiptapLoader.item.editor) {
+                tiptapLoader.item.editor.runJavaScript(
                     "if(window.__dvnTiptapEditor)window.__dvnTiptapEditor.commands.focus()");
             }
         }

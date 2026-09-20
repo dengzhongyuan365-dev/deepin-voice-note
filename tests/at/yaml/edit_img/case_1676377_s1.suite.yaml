@@ -13,18 +13,16 @@ suites:
   name: 图片插入图片_粘贴与焦点位置
   description: 覆盖1676231、1676229、1676377；点击编辑区输入文本，插入图片，继续输入文本，验证图片和文本仍在
   steps:
-  - action: element_action
+  - action: mouse_click
     selector:
-      name: TiptapWebView
-      role: panel
-    do: click
+      name: NoteContentWebView
+    wait: 0.3
   - action: keyboard_type
     text: image_before
-  - action: element_action
+  - action: mouse_click
     selector:
-      name: TiptapWebView
-      role: panel
-    do: click
+      name: NoteContentWebView
+    wait: 0.3
   - action: webengine_eval_js
     value:
       port: 9222
@@ -42,6 +40,10 @@ suites:
         })()
     wait: 0.5
     note: 通过 QWebChannel 粘贴一张测试图片并等待 DOM 图片节点生成
+  - action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
   - action: keyboard_type
     text: image_after
   - action: webengine_eval_js

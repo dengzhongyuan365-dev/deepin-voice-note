@@ -300,5 +300,3 @@ suites:
     action: assert_element
     selector:
       name: TiptapWebView
-  skip: file dialog path navigation depends on DTK file chooser AT-SPI; voice recording
-    requires audio sink/monitor and QTWEBENGINE_REMOTE_DEBUGGING

@@ -64,10 +64,6 @@ suites:
     action: assert_element
     selector:
       name: NoteContentWebView
-  skip: search box (SearchEdit, object_name "search") lacks Accessible.name; uses AT-SPI+xdotool
-    helper script (focus_search_and_query.py) to focus, type query and press Enter;
-    special character search and no-result state verification depend on runtime AT-SPI
-    inspection
 - id: suite_search_ops_002_s1
   name: 搜索结果_删除匹配项
   description: 覆盖1635203、1635191；搜索结果页右键笔记删除单条后结果数量减少，删除所有后搜索结果页显示无结果
@@ -132,10 +128,6 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: requires pre-existing notes containing "search_delete_001" in search results;
-    "删除所有文本笔记" menu item does not exist in source (NoteCtxMenu only has "删除");
-    search box lacks Accessible.name and uses AT-SPI helper script; delete confirmation
-    dialog and result count verification depend on runtime AT-SPI state
 - id: suite_search_ops_003_s1
   name: 搜索结果_保存TXT和保存语音
   description: 覆盖1635195、1635193；搜索结果页右键笔记通过保存笔记子菜单保存为TXT，通过保存语音菜单保存语音文件
@@ -202,10 +194,6 @@ suites:
   - step_type: assert
     action: assert_file_exists
     path: /tmp/search_result_voice.mp3
-  skip: requires pre-existing note with both text and voice content in search results;
-    保存语音 requires audio input device for voice note creation; nested QML context-menu
-    submenu (保存笔记 -> 保存为TXT) navigation may time out; search box lacks Accessible.name
-    and uses AT-SPI helper script
 - id: suite_search_ops_004_s1
   name: 搜索结果_不显示录音入口
   description: 覆盖1635185；搜索结果页不显示录音按钮和新建语音记事入口，验证搜索结果页无录音入口
@@ -247,9 +235,6 @@ suites:
     action: assert_element
     selector:
       name: NoteContentWebView
-  skip: requires negative assertion (assert_element_not_found) for "录音" button and
-    "新建语音记事" entry which YouQu framework does not support; search box lacks Accessible.name
-    and uses AT-SPI helper script
 - id: suite_search_ops_005_s1
   name: 搜索结果_重命名匹配与不匹配关键字
   description: 覆盖1635189；搜索有结果后右键重命名文本笔记（关键字匹配与不匹配各一次），验证主窗口与列表仍可用
@@ -316,8 +301,6 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: search box lacks Accessible.name and uses AT-SPI helper; rename dialog and
-    search-result refresh after keyword mismatch depend on runtime AT-SPI state
 - id: suite_search_ops_006_s1
   name: 搜索结果_新建笔记菜单置灰入口可见
   description: 覆盖1635197；搜索有结果后右键笔记，验证「新建笔记」菜单项仍出现在右键菜单中（产品在搜索态置灰不可用）
@@ -354,6 +337,3 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
-  skip: product disables NoteAddNew while isSearching; AT asserts menu item presence
-    only (enabled/grayed state not expressible without assert_action_disabled); search
-    box lacks Accessible.name

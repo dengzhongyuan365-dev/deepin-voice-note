@@ -74,7 +74,3 @@ suites:
   - step_type: assert
     action: assert_file_exists
     path: /tmp/search_result_voice.mp3
-  skip: requires pre-existing note with both text and voice content in search results;
-    保存语音 requires audio input device for voice note creation; nested QML context-menu
-    submenu (保存笔记 -> 保存为TXT) navigation may time out; search box lacks Accessible.name
-    and uses AT-SPI helper script

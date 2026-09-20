@@ -66,4 +66,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: image preview window may be external viewer; Escape/Alt+F4 best-effort close

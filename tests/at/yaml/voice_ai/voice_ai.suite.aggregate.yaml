@@ -561,7 +561,6 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: VoiceToText menu likely disabled while recording; grayed state needs manual check
 - id: suite_voice_ai_006_s1
   name: 删除语音同步清理转写文案
   description: 覆盖1676441；录音并触发语音转文字后删除该语音块，验证转写文案节点同步消失
@@ -663,7 +662,6 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: requires working AI/network for transcript generation before delete
 - id: suite_voice_ai_007_s1
   name: 网络异常时语音转文字提示
   description: 覆盖1679637；录音后临时关闭网络再触发语音转文字，验证出现确认弹窗或流程不崩溃（无网提示文案人工）
@@ -725,7 +723,6 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: nmcli networking off may require privileges; dialog text assertion is manual when network stays on
 - id: suite_voice_ai_008_s1
   name: 语音朗读入口在无可用输出时仍可触发
   description: 覆盖1873455、兼补强1676463；切换到 null 输出后触发文本朗读入口，验证编辑器仍可用且进程不崩溃（无声/提示人工）
@@ -783,4 +780,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: menu label may be 语音朗读/文字转语音 by locale; missing-device toast needs manual check

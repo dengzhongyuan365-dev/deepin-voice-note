@@ -5,7 +5,7 @@ setup:
 - action: session_start
   command: >-
     bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || [ "$SINK" = null-sink ]; then SINK=$(pactl list short sinks | awk '\''$2 != "null-sink" {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
-  wait: 6.0
+  wait: 8.0
 teardown:
 - action: session_stop
 suites:
@@ -13,6 +13,31 @@ suites:
   name: 删除语音同步清理转写文案
   description: 覆盖1676441；录音并触发语音转文字后删除该语音块，验证转写文案节点同步消失
   steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --select SettingsMenuItem --wait-visible InternalRadioButton --click-visible InternalRadioButton --timeout 8'
+    wait: 1.5
+    note: 设置录制内部音频，保证环回音频可被转写（与 voice_ai_003 一致）
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 1.0
+  - step_type: action
+    action: element_action
+    selector:
+      name: NewNoteButton
+    do: click
+    wait: 0.8
+    note: 新建笔记，确保 webVisible/recordBtnEnabled 后再录音
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: at_record_seed
+    wait: 0.4
   - step_type: action
     action: webengine_eval_js
     value:
@@ -26,17 +51,41 @@ suites:
           return true;
         })()
     wait: 1.0
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: PauseButton
   - step_type: action
-    action: session_start
-    command: >-
-      bash -lc 'A=tests/at/fixtures/tengwanggexu.mp3; if command -v ffplay >/dev/null 2>&1; then timeout 5s ffplay -nodisp -autoexit -loglevel quiet "$A"; elif command -v paplay >/dev/null 2>&1; then timeout 5s paplay "$A"; else xdg-open "$A"; fi'
-    wait: 5.5
+    action: command
+    command: bash -lc './tests/at/scripts/play_loopback_audio.sh tests/at/fixtures/tengwanggexu.mp3 8'
+    wait: 0.5
+    note: command 播环回音频；禁止 session_start（会覆盖 app_process）
   - step_type: action
     action: element_action
     selector:
       name: StopButton
     do: click
     wait: 2.0
+  - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 15
+      script: |
+        (function(){
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 12000;
+            function poll(){
+              const count = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              if (count > 0) return resolve({voiceCount: count});
+              if (Date.now() > deadline) return reject(new Error('voice block not generated'));
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
+        })()
+    wait: 0.5
   - step_type: action
     action: webengine_mouse_event
     value:
@@ -58,11 +107,11 @@ suites:
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      timeout: 60
+      timeout: 90
       script: |
         (function(){
           return new Promise(function(resolve, reject){
-            const deadline = Date.now() + 55000;
+            const deadline = Date.now() + 85000;
             function poll(){
               const textEl = document.querySelector('.translateText');
               const text = textEl ? (textEl.innerText || textEl.textContent || '').trim() : '';
@@ -75,31 +124,58 @@ suites:
         })()
     wait: 1.0
   - step_type: action
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 8
+      script: |
+        (function(){
+          // 转写后右键易命中 .translateText 或粘住的 transcript 上下文，先清掉再选语音节点
+          window.__dvnTiptapContextTranscript = null;
+          const vb = document.querySelector('.voiceInfoBox[data-type="voice-block"]');
+          if (!vb) throw new Error('voice block missing before delete');
+          if (typeof window.__dvnTiptapSelectVoiceBlockFromElement === 'function') {
+            window.__dvnTiptapSelectVoiceBlockFromElement(vb);
+          }
+          return {selected: true};
+        })()
+    wait: 0.3
+  - step_type: action
     action: webengine_mouse_event
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      selector: .voiceInfoBox[data-type="voice-block"]
+      selector: .voiceBtn
       button: right
     wait: 1.0
+    note: 必须点 .voiceBtn；点 voiceInfoBox 中心会落在 translateText 上弹出文本菜单
   - step_type: action
     action: command
     command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 8'
-    wait: 1.0
+    wait: 1.5
   - step_type: action
     action: webengine_eval_js
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      timeout: 10
+      timeout: 15
       script: |
         (function(){
-          const voiceCount = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
-          const transcript = document.querySelector('.translateText');
-          const text = transcript ? (transcript.innerText || transcript.textContent || '').trim() : '';
-          if (voiceCount !== 0) throw new Error('voice block still present after delete');
-          if (text) throw new Error('transcript text still present after voice delete');
-          return {voiceCount: voiceCount, transcriptCleared: true};
+          return new Promise(function(resolve, reject){
+            const deadline = Date.now() + 12000;
+            function poll(){
+              const voiceCount = document.querySelectorAll('.voiceInfoBox[data-type="voice-block"]').length;
+              const transcript = document.querySelector('.translateText');
+              const text = transcript ? (transcript.innerText || transcript.textContent || '').trim() : '';
+              if (voiceCount === 0 && !text) return resolve({voiceCount: 0, transcriptCleared: true});
+              if (Date.now() > deadline) {
+                return reject(new Error('after delete: voiceCount=' + voiceCount + ' transcriptLen=' + text.length));
+              }
+              setTimeout(poll, 300);
+            }
+            poll();
+          });
         })()
     wait: 0.5
   assert_steps:
@@ -110,4 +186,3 @@ suites:
   - step_type: assert
     action: assert_process_running
     process: deepin-voice-note
-  skip: requires working AI/network for transcript generation before delete

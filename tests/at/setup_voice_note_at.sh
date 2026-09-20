@@ -85,4 +85,9 @@ cp -f -- "${FIXTURE_DB}" "${DB_PATH}"
 wait_for_schema
 verify_fixture_data
 
-exec "${APP_NAME}"
+# Prefer AT-built binary when present (product QML fixes under verification).
+if [[ -z "${AT_APP_BIN:-}" && -x "${SCRIPT_DIR}/bin/deepin-voice-note" ]]; then
+    AT_APP_BIN="${SCRIPT_DIR}/bin/deepin-voice-note"
+fi
+
+exec "${AT_APP_BIN:-${APP_NAME}}"

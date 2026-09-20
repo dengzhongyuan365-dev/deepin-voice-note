@@ -96,6 +96,60 @@ def _wait_name(app_name: str, name: str, timeout: float, visible: bool = False):
     raise RuntimeError(str(last) if last else f"timeout waiting for {name}")
 
 
+def _wait_any_name(app_name: str, names: list[str], timeout: float, visible: bool = False):
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        app = _find_app(app_name)
+        for name in names:
+            try:
+                return _find_by_name(app, name, visible=visible), name
+            except Exception as exc:
+                last = exc
+        time.sleep(0.12)
+    raise RuntimeError(str(last) if last else f"timeout waiting for any of {names}")
+
+
+def _expect_aliases(name: str) -> list[str]:
+    aliases = [name]
+    if name == "DeleteFolderMenuItem":
+        aliases.extend(["删除", "Delete"])
+    elif name in ("删除", "Delete"):
+        aliases.extend(["DeleteFolderMenuItem", "删除", "Delete"])
+    elif name == "ConfirmButton":
+        aliases.extend(["删除", "Delete"])
+    # de-dupe preserve order
+    out = []
+    for n in aliases:
+        if n not in out:
+            out.append(n)
+    return out
+
+
+def _find_anywhere(name: str, visible: bool = False):
+    desktop = Atspi.get_desktop(0)
+    for app in _children(desktop):
+        try:
+            return _find_by_name(app, name, visible=visible)
+        except Exception:
+            continue
+    suffix = " visible" if visible else ""
+    raise RuntimeError(f"AT-SPI{suffix} node not found on desktop by name: {name}")
+
+
+def _wait_anywhere(names: list[str], timeout: float, visible: bool = False):
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        for name in names:
+            try:
+                return _find_anywhere(name, visible=visible), name
+            except Exception as exc:
+                last = exc
+        time.sleep(0.12)
+    raise RuntimeError(str(last) if last else f"timeout waiting on desktop for any of {names}")
+
+
 def _visible_folder_items(app):
     list_view = _find_by_name(app, "FolderListView", visible=True)
     rows = []
@@ -159,6 +213,11 @@ def main() -> int:
         action="store_true",
         help="After clicking expect, wait for ConfirmButton (delete dialog)",
     )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="After clicking expect, wait for and press ConfirmButton",
+    )
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
 
@@ -177,13 +236,25 @@ def main() -> int:
                 raise RuntimeError("no visible folder item")
             target = items[min(args.index, len(items) - 1)]
             _right_click_center(target)
-            item = _wait_name(args.app, args.expect, timeout=1.5, visible=True)
+            # Menu items sometimes report zero extents; prefer visible, then any.
+            names = _expect_aliases(args.expect)
+            item = None
+            matched = None
+            try:
+                item, matched = _wait_any_name(args.app, names, timeout=1.5, visible=True)
+            except Exception:
+                item, matched = _wait_any_name(args.app, names, timeout=1.5, visible=False)
             if args.click_expect:
                 _press(item)
-                print(f"clicked folder menu item via AT-SPI: {args.expect}", flush=True)
-                if args.wait_confirm:
-                    _wait_name(args.app, "ConfirmButton", timeout=5.0, visible=True)
-                    print("ConfirmButton visible after folder delete menu", flush=True)
+                print(f"clicked folder menu item via AT-SPI: {matched}", flush=True)
+                if args.wait_confirm or args.confirm:
+                    confirm, cname = _wait_anywhere(
+                        _expect_aliases("ConfirmButton"), timeout=5.0, visible=False
+                    )
+                    print(f"{cname} visible after folder delete menu", flush=True)
+                    if args.confirm:
+                        _press(confirm)
+                        print(f"clicked {cname} via AT-SPI", flush=True)
             if args.close:
                 subprocess.run(["xdotool", "key", "Escape"], check=True)
                 time.sleep(0.2)

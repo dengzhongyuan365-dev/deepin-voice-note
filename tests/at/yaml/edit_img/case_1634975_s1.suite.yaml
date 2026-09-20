@@ -17,11 +17,13 @@ suites:
   description: '全选文本后右键复制、剪切，输入新文本后右键删除'
   tags: []
   steps:
-  - action: element_action
+  - action: mouse_click
     selector:
-      name: TiptapWebView
-      role: panel
-    do: click
+      name: NoteContentWebView
+    wait: 0.3
+  - action: keyboard_type
+    text: edit_menu_seed
+    wait: 0.5
   - action: keyboard_hot_key
     key: ctrl+a
   - action: dtk_context_menu
@@ -38,6 +40,10 @@ suites:
       role: panel
     items:
     - 剪切
+  - action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
   - action: keyboard_type
     text: edit_menu_002
   - action: keyboard_hot_key

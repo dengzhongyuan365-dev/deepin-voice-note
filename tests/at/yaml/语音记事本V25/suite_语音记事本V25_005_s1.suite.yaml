@@ -18,6 +18,11 @@ suites:
       name: NewNoteButton
     do: click
   - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
     action: keyboard_type
     text: 测试文本内容
   - step_type: action
