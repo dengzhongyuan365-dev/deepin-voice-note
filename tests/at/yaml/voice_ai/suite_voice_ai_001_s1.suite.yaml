@@ -29,32 +29,27 @@ suites:
     text: 朗读测试文字
     wait: 1.0
   - step_type: action
-    action: keyboard_hot_key
-    selector:
-      name: TiptapWebView
-    key: ctrl+a
-    wait: 0.5
-  - step_type: action
     action: webengine_eval_js
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      script: "(function(){\n const ed=document.querySelector('.ProseMirror');\n const\
-        \ text=ed ? (ed.innerText||ed.textContent||'') : '';\n if (!text.includes('朗读测试文字'))\
-        \ throw new Error('朗读测试文字 not present in editor');\n return {textPresent:true};\n\
-        })()"
-    wait: 0.5
-    note: 确认朗读前正文包含指定文本
-  - step_type: action
-    action: webengine_eval_js
-    value:
-      port: 9222
-      target_url_contains: tiptap-editor
-      script: (function(){ const s=window.getSelection(); if (!s || s.toString().trim()
-        !== '朗读测试文字') throw new Error('正文未完成全选'); return {selectedText:s.toString()};
+      timeout: 15
+      script: |
+        (function(){
+          const ed = document.querySelector('.ProseMirror');
+          if (!ed) throw new Error('ProseMirror missing');
+          const text = ed.innerText || ed.textContent || '';
+          if (!text.includes('朗读测试文字')) throw new Error('朗读测试文字 not present in editor');
+          const range = document.createRange();
+          range.selectNodeContents(ed);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          if (sel.toString().trim() !== '朗读测试文字') throw new Error('正文未完成全选');
+          return {selectedText: sel.toString()};
         })()
     wait: 0.3
-    note: 确认正文已被选中后再打开右键菜单
+    note: JS 全选正文，避免 ctrl+a/右键之间丢选导致 canSpeech=false、菜单项不可见
   - step_type: action
     action: webengine_mouse_event
     value:
@@ -63,19 +58,32 @@ suites:
       timeout: 10
       selector: .ProseMirror
       button: right
-    wait: 1.0
+    wait: 1.2
     note: 对选中的正文区域执行真实右键操作
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 "Text to Speech" --timeout 12'
     wait: 1.0
-    note: 点击右键菜单中的语音朗读（与 voice_ai_008 一致，避免 stale AT-SPI 节点）
+    note: 中/英 locale 均匹配；失败时 helper 会 dump 可见菜单项
   - step_type: action
-    action: keyboard_hot_key
-    selector:
-      name: TiptapWebView
-    key: ctrl+a
-    wait: 0.5
+    action: webengine_eval_js
+    value:
+      port: 9222
+      target_url_contains: tiptap-editor
+      timeout: 15
+      script: |
+        (function(){
+          const ed = document.querySelector('.ProseMirror');
+          if (!ed) throw new Error('ProseMirror missing');
+          const range = document.createRange();
+          range.selectNodeContents(ed);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          if (!sel.toString().trim()) throw new Error('重复朗读前未选中正文');
+          return {selectedText: sel.toString()};
+        })()
+    wait: 0.3
   - step_type: action
     action: webengine_mouse_event
     value:
@@ -84,13 +92,13 @@ suites:
       timeout: 10
       selector: .ProseMirror
       button: right
-    wait: 1.0
+    wait: 1.2
     note: 再次对选中的正文区域执行真实右键操作
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 "Text to Speech" --timeout 12'
     wait: 1.0
-    note: 再次点击右键菜单中的语音朗读，验证重复触发
+    note: 再次点击语音朗读，验证重复触发
   - step_type: action
     action: keyboard_hot_key
     selector:

@@ -5,6 +5,9 @@ Qt/QML menus can leave hidden/stale menu items in the AT-SPI tree.  The
 standard selector may match a stale item with zero extents first.  This helper
 keeps the user path unchanged (the suite must already have opened the real
 context/menu) and presses the currently visible item only.
+
+Names may be locale-dependent (e.g. 语音朗读 vs Text to Speech). Pass every
+acceptable name; the first visible match wins.
 """
 from __future__ import annotations
 
@@ -93,10 +96,10 @@ def _press(node) -> None:
     node.do_action(0)
 
 
-def _find_visible_item(app, item_name: str, role: str | None):
+def _find_visible_item(app, names: set[str], role: str | None):
     candidates = []
     for node in _walk(app):
-        if _name(node) != item_name:
+        if _name(node) not in names:
             continue
         if role and _role(node) != role:
             continue
@@ -106,18 +109,48 @@ def _find_visible_item(app, item_name: str, role: str | None):
         candidates.append((ext.y, ext.x, node))
     if not candidates:
         role_msg = f" role={role}" if role else ""
-        raise RuntimeError(f"visible menu item not found: name={item_name}{role_msg}")
+        raise RuntimeError(
+            f"visible menu item not found: names={sorted(names)}{role_msg}"
+        )
     candidates.sort(key=lambda item: (item[0], item[1]))
     return candidates[0][2]
 
 
+def _dump_visible_menuish(app, limit: int = 40) -> str:
+    rows = []
+    for node in _walk(app):
+        name = _name(node)
+        if not name:
+            continue
+        role = _role(node)
+        if role not in {"menu item", "menu", "check menu item", "radio menu item"}:
+            continue
+        ext = _extents(node)
+        if ext is None:
+            continue
+        rows.append(f"{name!r}/{role}@{ext.x},{ext.y}")
+        if len(rows) >= limit:
+            break
+    return ", ".join(rows) if rows else "(none)"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", help="accessible name to press")
+    parser.add_argument(
+        "names",
+        nargs="+",
+        help="acceptable accessible names (locale variants allowed)",
+    )
     parser.add_argument("--app", default="deepin-voice-note")
-    parser.add_argument("--role", default="menu item")
+    parser.add_argument(
+        "--role",
+        default="menu item",
+        help="AT-SPI role filter; empty string disables role matching",
+    )
     parser.add_argument("--timeout", type=float, default=5.0)
     args = parser.parse_args()
+    names = {n for n in args.names if n}
+    role = args.role or None
 
     try:
         Atspi.init()
@@ -129,13 +162,28 @@ def main() -> int:
     while time.time() < deadline:
         try:
             app = _find_app(args.app)
-            item = _find_visible_item(app, args.name, args.role or None)
+            # Prefer exact role match; if the toolkit exposes a different role
+            # string, fall back to name+extents only within the same poll.
+            try:
+                item = _find_visible_item(app, names, role)
+            except RuntimeError:
+                if role is None:
+                    raise
+                item = _find_visible_item(app, names, None)
             _press(item)
+            print(f"clicked visible menu item via AT-SPI: {_name(item)}")
             return 0
         except Exception as exc:
             last_error = exc
             time.sleep(0.1)
-    raise RuntimeError(str(last_error) if last_error else f"timeout pressing {args.name}")
+
+    detail = str(last_error) if last_error else f"timeout pressing {sorted(names)}"
+    try:
+        app = _find_app(args.app)
+        detail = f"{detail}; visible menus: {_dump_visible_menuish(app)}"
+    except Exception:
+        pass
+    raise RuntimeError(detail)
 
 
 if __name__ == "__main__":

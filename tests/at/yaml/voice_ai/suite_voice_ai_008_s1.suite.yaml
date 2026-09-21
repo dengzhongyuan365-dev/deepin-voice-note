@@ -47,7 +47,7 @@ suites:
     wait: 1.0
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 --timeout 8'
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 语音朗读 "Text to Speech" --timeout 12'
     wait: 1.0
   - step_type: action
     action: keyboard_press

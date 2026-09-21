@@ -91,14 +91,18 @@ suites:
     wait: 3.0
   - step_type: action
     action: command
-    command: bash -lc 'mkdir -p /tmp/search_result_voice && ./tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect --timeout 15'
+    command: bash -lc 'rm -rf /tmp/search_result_voice && mkdir -p /tmp/search_result_voice && ./tests/at/scripts/open_note_context_menu.py --index 0 --expect 保存语音 --click-expect --timeout 15'
     wait: 1.5
   - step_type: action
     action: file_dialog_select
     path: /tmp/search_result_voice/
-    name: search_result_voice.mp3
     wait: 3.0
-    note: NoteSaveVoice 走 FolderDialog；与 save_exp_005 一致用子目录
+    note: NoteSaveVoice 走 FolderDialog；勿填 name（会落成 /tmp 触发 checkPath 误判 / 不可写）；落盘名为 voiceTitle
+  - step_type: action
+    action: command
+    command: bash -lc 'compgen -G "/tmp/search_result_voice/*.mp3" >/dev/null'
+    wait: 0.2
+    note: 导出文件名是录音标题(yyyyMMdd hh.mm.ss.mp3)，不能写死 search_result_voice.mp3
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -112,7 +116,3 @@ suites:
     action: assert_file_exists
     path: /tmp/
     name: search_result_note.txt
-  - step_type: assert
-    action: assert_file_exists
-    path: /tmp/search_result_voice/
-    name: search_result_voice.mp3
