@@ -1,6 +1,6 @@
 name: edit_img(#edit_img)_case_1634975_s1_suite
 app: deepin-voice-note
-description: '编辑区右键菜单_选中文本剪切复制删除（覆盖1634975、1634973、1634971）'
+description: '编辑区右键菜单_选中文本剪切复制删除（覆盖1634975、1634973、1634971、1634969、1634977）'
 module: edit_img(#edit_img)
 tags: []
 fast_fail: false
@@ -14,7 +14,7 @@ teardown:
 suites:
 - id: case_1634975_s1
   name: 编辑区右键菜单_选中文本剪切复制删除
-  description: '全选文本后右键复制、剪切，输入新文本后右键删除'
+  description: '全选文本后右键复制、剪切，输入新文本后右键删除（覆盖1634975、1634973、1634971、1634969、1634977）'
   tags: []
   steps:
   - action: mouse_click

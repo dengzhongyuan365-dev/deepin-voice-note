@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: case_1676419_s1
   name: 删除笔记-通过快捷键操作
-  description: 覆盖1676419；选中笔记后通过真实右键菜单触发删除，验证删除确认弹窗出现；Alt+M 在源码中绑定编辑区 JS 菜单，笔记列表删除以右键菜单为准
+  description: 覆盖1676419、1676349；选中笔记后右键删除并出现确认弹窗（弹窗 Tab 遍历1676403【人工】）；列表删除不以 Alt+M 为准
   steps:
   - step_type: action
     action: mouse_click

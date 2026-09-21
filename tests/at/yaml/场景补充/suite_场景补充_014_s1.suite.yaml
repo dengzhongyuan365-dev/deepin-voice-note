@@ -1,0 +1,38 @@
+name: suite_场景补充_014_s1_suite
+app: deepin-voice-note
+module: 场景补充
+setup:
+- action: session_start
+  command: bash -lc 'exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+teardown:
+- action: session_stop
+suites:
+- id: suite_场景补充_014_s1
+  name: 主菜单关于与F1帮助入口
+  description: 覆盖1676453、1676455；打开标题栏菜单点击关于（中/英名），Esc 关闭后再按 F1 触发帮助手册入口，验证主进程仍在（手册文案【人工】）
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --timeout 12'
+    wait: 0.8
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py AboutMenuItem 关于 About --timeout 12'
+    wait: 1.2
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: F1
+    wait: 1.2
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow

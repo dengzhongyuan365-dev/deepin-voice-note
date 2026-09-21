@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_场景补充_011_s1
   name: 重命名文本笔记后列表仍可用
-  description: 覆盖1634951；新建文本笔记后右键重命名并确认，验证记事本/笔记列表入口仍可见（时间排序置顶依赖人工核对）
+  description: 覆盖1634951、1676351；新建文本笔记后右键重命名并确认（含 Enter 完成重命名路径），验证记事本/笔记列表入口仍可见（时间排序置顶依赖人工核对）
   steps:
   - step_type: action
     action: element_action

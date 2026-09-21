@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_save_exp_001_s1
   name: 详情页_保存为TXT与HTML
-  description: 覆盖1676345、1676347、1634939、1634933；右键笔记通过保存笔记子菜单保存为TXT和HTML格式，验证文件生成
+  description: 覆盖1676345、1676347、1676417、1634939、1634933；右键笔记通过保存笔记子菜单保存为TXT和HTML格式，验证文件生成
   steps:
   - step_type: action
     action: element_action

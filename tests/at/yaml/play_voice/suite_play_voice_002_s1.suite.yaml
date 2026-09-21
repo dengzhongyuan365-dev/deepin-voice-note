@@ -11,7 +11,7 @@ teardown:
 suites:
 - id: suite_play_voice_002_s1
   name: 右键菜单_保存复制剪切删除
-  description: 覆盖1676277、1676279、1676285、1676287；录制语音后通过语音块真实右键菜单覆盖复制、剪切、粘贴、保存为MP3和删除链路
+  description: 覆盖1676277、1676279、1676285、1676287、1676211；录制语音后右键复制/剪切/保存MP3/删除（Ctrl+Z 撤销录音插入【人工】）
   steps:
   - step_type: action
     action: command

@@ -164,7 +164,7 @@ suites:
       name: MicrophoneRadioButton
 - id: suite_场景补充_004_s1
   name: 记事本与文本笔记重命名异常输入覆盖
-  description: 覆盖xlsx命名规则场景：空格、特殊字符、Esc取消等异常输入；使用F2进入重命名避免QML右键菜单导航不稳定
+  description: 覆盖1634499、1634855、1634911、1634915、1634919、1634923、1634925、1676351、1676429；F2重命名记事本/笔记，覆盖空格、特殊字符、Esc取消与Enter确认（超长/重名/空名提交【人工】）
   steps:
   - step_type: action
     action: element_action
@@ -202,7 +202,7 @@ suites:
     wait: 0.5
   - step_type: action
     action: keyboard_press
-    key: F2
+    key: F3
     wait: 0.5
   - step_type: action
     action: keyboard_hot_key
@@ -216,6 +216,26 @@ suites:
     action: keyboard_press
     key: Escape
     wait: 0.5
+  - step_type: action
+    action: keyboard_press
+    key: F3
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    key: Ctrl+A
+    wait: 0.2
+  - step_type: action
+    action: command
+    command: bash -lc 'fcitx5-remote -c >/dev/null 2>&1 || true'
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: RenameA1
+    wait: 0.2
+  - step_type: action
+    action: keyboard_press
+    key: Enter
+    wait: 0.8
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -229,6 +249,10 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: RenameA1
 - id: suite_场景补充_005_s1
   name: 多选笔记Shift选择与批量操作工具条
   description: 覆盖xlsx多选场景：Shift选择多条笔记后展示批量移动、保存笔记、删除等详情页工具条入口
@@ -314,7 +338,7 @@ suites:
       name: NoteContentWebView
 - id: suite_场景补充_008_s1
   name: Tiptap选中文本格式快捷键与撤销重做
-  description: 覆盖xlsx选中文本设置格式场景：选中文本后执行加粗、斜体、下划线、删除线快捷键，并执行撤销重做验证编辑区可用
+  description: 覆盖1676387、1676389、1676391、1676393、1676215；选中后格式快捷键与 Backspace/Delete，再撤销重做（录音块 Ctrl+Z 见1676211【人工】）
   steps:
   - step_type: action
     action: element_action
@@ -374,7 +398,7 @@ suites:
       name: TiptapWebView
 - id: suite_场景补充_009_s1
   name: 主界面列表收起展开与窗口快捷键稳定性
-  description: 覆盖xlsx列表收起展开、最大化/默认窗口切换、最小化类窗口操作场景；验证操作后主界面仍可用
+  description: 覆盖1676379；点击侧栏收起/展开，再 Alt+F10/F9 切换窗口，验证主界面仍可用
   steps:
   - step_type: action
     action: element_action
@@ -410,7 +434,7 @@ suites:
       name: VoiceNoteMainWindow
 - id: suite_场景补充_010_s1
   name: 主菜单退出应用
-  description: 覆盖xlsx主菜单退出场景：通过标题栏主菜单触发退出，验证进程结束
+  description: 覆盖1676451；通过标题栏主菜单 ExitMenuItem 退出，验证进程结束
   steps:
   - step_type: action
     action: command
@@ -424,7 +448,7 @@ suites:
     wait: 5.0
 - id: suite_场景补充_011_s1
   name: 重命名文本笔记后列表仍可用
-  description: 覆盖1634951；新建文本笔记后右键重命名并确认，验证记事本/笔记列表入口仍可见（时间排序置顶依赖人工核对）
+  description: 覆盖1634951、1676351；新建文本笔记后右键重命名并确认（含 Enter 完成重命名路径），验证记事本/笔记列表入口仍可见（时间排序置顶依赖人工核对）
   steps:
   - step_type: action
     action: element_action
@@ -608,6 +632,34 @@ suites:
     selector:
       name: CreateFolderButton
       role: button
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: VoiceNoteMainWindow
+- id: suite_场景补充_014_s1
+  name: 主菜单关于与F1帮助入口
+  description: 覆盖1676453、1676455；打开标题栏菜单点击关于（中/英名），Esc 关闭后再按 F1 触发帮助手册入口，验证主进程仍在（手册文案【人工】）
+  steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --timeout 12'
+    wait: 0.8
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/click_visible_menu_item.py AboutMenuItem 关于 About --timeout 12'
+    wait: 1.2
+  - step_type: action
+    action: keyboard_press
+    key: Escape
+    wait: 0.8
+  - step_type: action
+    action: keyboard_press
+    key: F1
+    wait: 1.2
+  assert_steps:
+  - step_type: assert
+    action: assert_process_running
+    process: deepin-voice-note
   - step_type: assert
     action: assert_element
     selector:

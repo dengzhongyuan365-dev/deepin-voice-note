@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_场景补充_008_s1
   name: Tiptap选中文本格式快捷键与撤销重做
-  description: 覆盖xlsx选中文本设置格式场景：选中文本后执行加粗、斜体、下划线、删除线快捷键，并执行撤销重做验证编辑区可用
+  description: 覆盖1676387、1676389、1676391、1676393、1676215；选中后格式快捷键与 Backspace/Delete，再撤销重做（录音块 Ctrl+Z 见1676211【人工】）
   steps:
   - step_type: action
     action: element_action
@@ -46,6 +46,18 @@ suites:
   - step_type: action
     action: keyboard_hot_key
     key: Ctrl+Shift+X
+    wait: 0.2
+  - step_type: action
+    action: keyboard_press
+    key: BackSpace
+    wait: 0.2
+  - step_type: action
+    action: keyboard_hot_key
+    key: Ctrl+A
+    wait: 0.2
+  - step_type: action
+    action: keyboard_press
+    key: Delete
     wait: 0.2
   - step_type: action
     action: keyboard_hot_key

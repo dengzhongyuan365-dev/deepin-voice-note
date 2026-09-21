@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_base_flow_002_s1
   name: 新建笔记_多入口创建
-  description: 覆盖1676341、1676411；通过笔记右键菜单、记事本右键菜单、Ctrl+B、聚焦新建笔记按钮后Enter四种入口创建文本笔记
+  description: 覆盖1676341、1676411、1676413；通过笔记右键菜单、记事本右键菜单、Ctrl+B、聚焦新建笔记按钮后Enter四种入口创建文本笔记
   steps:
   - step_type: action
     action: command

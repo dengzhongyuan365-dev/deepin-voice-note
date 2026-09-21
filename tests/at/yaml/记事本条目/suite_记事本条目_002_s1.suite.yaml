@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_记事本条目_002_s1
   name: 重命名记事本-右键菜单F2与双击正向流程
-  description: ''
+  description: 覆盖1634499、1676429；右键/F2/双击重命名记事本并 Enter 确认
   steps:
   - step_type: action
     action: element_action

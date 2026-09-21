@@ -68,7 +68,7 @@ suites:
       name: TiptapWebView
 - id: suite_文本笔记详情页_008_s1
   name: 点击文本区域编辑文字增删剪切复制粘贴清空
-  description: ''
+  description: 覆盖1676405；点击文本区域编辑、增删、剪切复制粘贴与清空，验证编辑区仍可用
   steps:
   - step_type: action
     action: element_action

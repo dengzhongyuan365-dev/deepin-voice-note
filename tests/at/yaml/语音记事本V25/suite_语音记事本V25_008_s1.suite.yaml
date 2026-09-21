@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_语音记事本V25_008_s1
   name: 窗口操作与置顶笔记验证
-  description: ''
+  description: 覆盖1676465；Alt+M 打开笔记菜单后回车触发置顶/取消置顶，验证列表与主界面仍可用
   steps:
   - step_type: action
     action: mouse_click

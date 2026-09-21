@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_快捷键使用_003_s1
   name: 空白页Delete快捷键无作用无异常
-  description: ''
+  description: 覆盖1635265；空白页按 Delete 无删除对象时应用不崩溃（录音/转写/回放中 Delete【人工】）
   steps:
   - step_type: action
     action: keyboard_press

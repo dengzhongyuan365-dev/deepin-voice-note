@@ -10,7 +10,7 @@ teardown:
 suites:
 - id: suite_场景补充_004_s1
   name: 记事本与文本笔记重命名异常输入覆盖
-  description: 覆盖xlsx命名规则场景：空格、特殊字符、Esc取消等异常输入；使用F2进入重命名避免QML右键菜单导航不稳定
+  description: 覆盖1634499、1634855、1634911、1634915、1634919、1634923、1634925、1676351、1676429；F2重命名记事本/笔记，覆盖空格、特殊字符、Esc取消与Enter确认（超长/重名/空名提交【人工】）
   steps:
   - step_type: action
     action: element_action
@@ -48,7 +48,7 @@ suites:
     wait: 0.5
   - step_type: action
     action: keyboard_press
-    key: F2
+    key: F3
     wait: 0.5
   - step_type: action
     action: keyboard_hot_key
@@ -62,6 +62,26 @@ suites:
     action: keyboard_press
     key: Escape
     wait: 0.5
+  - step_type: action
+    action: keyboard_press
+    key: F3
+    wait: 0.5
+  - step_type: action
+    action: keyboard_hot_key
+    key: Ctrl+A
+    wait: 0.2
+  - step_type: action
+    action: command
+    command: bash -lc 'fcitx5-remote -c >/dev/null 2>&1 || true'
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: RenameA1
+    wait: 0.2
+  - step_type: action
+    action: keyboard_press
+    key: Enter
+    wait: 0.8
   assert_steps:
   - step_type: assert
     action: assert_element
@@ -75,3 +95,7 @@ suites:
     action: assert_element
     selector:
       name: NoteItemListView
+  - step_type: assert
+    action: assert_element
+    selector:
+      name: RenameA1

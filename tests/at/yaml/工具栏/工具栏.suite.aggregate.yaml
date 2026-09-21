@@ -8,7 +8,7 @@ setup:
 suites:
 - id: suite_工具栏_006_s1
   name: 工具栏-关闭主界面
-  description: 覆盖1676445；通过 Alt+F4 关闭主界面，验证进程退出
+  description: 覆盖1676445、1635037；Alt+F4 关闭主界面并退出进程（录音中关应用的终止提示【人工】）
   steps:
   - step_type: action
     action: keyboard_hot_key
