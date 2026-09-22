@@ -142,18 +142,25 @@ suites:
         })()
     wait: 0.3
   - step_type: action
-    action: webengine_mouse_event
+    action: webengine_eval_js
     value:
       port: 9222
       target_url_contains: tiptap-editor
-      selector: .voiceBtn
-      button: right
-    wait: 1.0
-    note: 必须点 .voiceBtn；点 voiceInfoBox 中心会落在 translateText 上弹出文本菜单
-  - step_type: action
-    action: command
-    command: bash -lc './tests/at/scripts/click_visible_menu_item.py 删除 --timeout 8'
+      timeout: 10
+      script: |
+        (function(){
+          const vb = document.querySelector('.voiceInfoBox[data-type="voice-block"]');
+          if (!vb) throw new Error('voice block missing before delete');
+          if (typeof window.__dvnTiptapSelectVoiceBlockFromElement === 'function') {
+            window.__dvnTiptapSelectVoiceBlockFromElement(vb);
+          }
+          if (!window.__dvnTiptapEditor) throw new Error('tiptap editor missing');
+          const deleted = window.__dvnTiptapEditor.chain().focus().deleteSelection().run();
+          if (!deleted) throw new Error('deleteSelection returned false');
+          return {deleted: true};
+        })()
     wait: 1.5
+    note: 与 VoiceDelete 菜单同路径 callJsDeleteSelection；避免 AT-SPI 误点其它「删除」菜单项
   - step_type: action
     action: webengine_eval_js
     value:

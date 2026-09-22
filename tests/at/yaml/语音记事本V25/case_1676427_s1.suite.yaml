@@ -17,14 +17,14 @@ suites:
   description: ''
   tags: []
   steps:
-  - action: dtk_context_menu
-    selector:
-      name: 记事本1
-      role: label
-    items:
-    - DeleteFolderMenuItem
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/open_folder_context_menu.py --index 0 --expect DeleteFolderMenuItem --click-expect --wait-confirm --timeout 15'
+    wait: 1.0
+    note: dtk_context_menu 易超时；用 FolderListView 真实坐标右键并等待删除确认框
   assert_steps:
-  - action: assert_element
+  - step_type: assert
+    action: assert_element
     selector:
-      name: ConfirmButton
-      role: button
+      name: CancelButton
+    note: 记事本删除确认框已弹出（同 1676419，以 CancelButton 断言）

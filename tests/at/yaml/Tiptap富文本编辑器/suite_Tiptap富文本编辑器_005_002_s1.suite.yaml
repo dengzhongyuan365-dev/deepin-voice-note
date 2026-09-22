@@ -84,30 +84,37 @@ suites:
     selector:
       name: TiptapWebView
     do: click
-    wait: 0.5
+    wait: 1.0
+  - action: wait
+    wait: 1.0
+    note: 等待 Summernote→Tiptap 迁移完成后再编辑
   - action: command
     command: bash -lc 'pkill -x xclip >/dev/null 2>&1 || true; printf %s migrationappend002 | xclip -selection clipboard >/dev/null 2>&1 &'
     wait: 0.4
+  - action: keyboard_press
+    key: End
+    wait: 0.2
   - action: keyboard_hot_key
     key: ctrl+v
-    wait: 1.5
+    wait: 2.0
   - action: element_action
     selector:
       name: NewNoteButton
       role: button
     do: click
-    wait: 0.8
+    wait: 1.5
   - action: element_action
     selector:
       name: 文本
       role: label
     do: click
-    wait: 0.8
+    wait: 1.5
   - action: assert_element
     selector:
       name: TiptapWebView
   - action: wait
-    wait: 0.5
+    wait: 2.0
+    note: 等待 Tiptap envelope 落库后再做 DB 断言
   assert_steps:
   - action: assert_process_running
     app: deepin-voice-note

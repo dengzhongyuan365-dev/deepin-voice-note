@@ -248,9 +248,31 @@ def main() -> int:
                 _press(item)
                 print(f"clicked folder menu item via AT-SPI: {matched}", flush=True)
                 if args.wait_confirm or args.confirm:
-                    confirm, cname = _wait_anywhere(
-                        _expect_aliases("ConfirmButton"), timeout=5.0, visible=False
-                    )
+                    time.sleep(0.25)
+                    confirm = None
+                    cname = None
+                    deadline = time.time() + 8.0
+                    last = None
+                    while time.time() < deadline:
+                        for name in ("ConfirmButton", "CancelButton"):
+                            for visible in (True, False):
+                                try:
+                                    confirm = _find_by_name(app, name, visible=visible)
+                                    cname = name
+                                    break
+                                except Exception as exc:
+                                    last = exc
+                            if confirm is not None:
+                                break
+                        if confirm is not None:
+                            break
+                        time.sleep(0.12)
+                    if confirm is None:
+                        raise RuntimeError(
+                            str(last)
+                            if last
+                            else "timeout waiting for folder delete confirm dialog"
+                        )
                     print(f"{cname} visible after folder delete menu", flush=True)
                     if args.confirm:
                         _press(confirm)

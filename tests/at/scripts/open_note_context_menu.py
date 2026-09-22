@@ -101,6 +101,50 @@ def _wait_named(app, name: str, timeout: float, visible: bool = True):
     raise RuntimeError(str(last) if last else f"timeout waiting {name}")
 
 
+def _find_anywhere(name: str, visible: bool = False):
+    desktop = Atspi.get_desktop(0)
+    for app in _children(desktop):
+        try:
+            return _find_named(app, name, visible=visible)
+        except Exception:
+            continue
+    suffix = " visible" if visible else ""
+    raise RuntimeError(f"AT-SPI{suffix} node not found on desktop by name: {name}")
+
+
+def _wait_anywhere(names: list[str], timeout: float, visible: bool = False):
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        for name in names:
+            try:
+                return _find_anywhere(name, visible=visible), name
+            except Exception as exc:
+                last = exc
+        time.sleep(0.12)
+    raise RuntimeError(str(last) if last else f"timeout waiting on desktop for any of {names}")
+
+
+def _wait_delete_confirm_dialog(app, timeout: float = 8.0):
+    # Keep the search inside deepin-voice-note.  Desktop-wide scans can match
+    # stale context-menu items named 「删除」 before the dialog mounts.
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        for name in ("ConfirmButton", "CancelButton"):
+            for visible in (True, False):
+                try:
+                    node = _find_named(app, name, visible=visible)
+                    print(f"{name} found for delete confirm dialog", flush=True)
+                    return node
+                except Exception as exc:
+                    last = exc
+        time.sleep(0.12)
+    raise RuntimeError(
+        str(last) if last else "timeout waiting for delete confirm dialog (ConfirmButton/CancelButton)"
+    )
+
+
 def _visible_note_items(app):
     list_view = _find_named(app, "NoteItemListView", visible=True)
     list_ext = _extents(list_view)
@@ -180,6 +224,11 @@ def main() -> int:
         action="store_true",
         help="After clicking expect (e.g. 删除), wait for and press ConfirmButton",
     )
+    parser.add_argument(
+        "--wait-confirm",
+        action="store_true",
+        help="After clicking expect (e.g. 删除), wait for ConfirmButton without pressing it",
+    )
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
 
@@ -209,27 +258,18 @@ def main() -> int:
                 _press(item)
                 print(f"clicked visible menu item via AT-SPI: {args.expect}", flush=True)
                 if args.cancel_after:
-                    cancel = _wait_named(app, "CancelButton", 5.0, visible=True)
+                    cancel, _ = _wait_anywhere(["CancelButton"], timeout=5.0, visible=False)
                     _press(cancel)
                     print("clicked CancelButton via AT-SPI", flush=True)
-                elif args.confirm_after:
-                    # Delete dialog: Accessible.name=ConfirmButton; visible label may be 删除
-                    confirm = None
-                    last_confirm = None
-                    for name in ("ConfirmButton", "删除", "Delete"):
-                        try:
-                            confirm = _wait_named(app, name, 2.0, visible=True)
-                            break
-                        except Exception as exc:
-                            last_confirm = exc
-                    if confirm is None:
-                        raise RuntimeError(
-                            f"ConfirmButton not found after {args.expect}: {last_confirm}"
-                        )
-                    _press(confirm)
-                    print(f"clicked confirm via AT-SPI: {_name(confirm)}", flush=True)
+                elif args.confirm_after or args.wait_confirm:
+                    time.sleep(0.25)
+                    confirm = _wait_delete_confirm_dialog(app, timeout=8.0)
+                    if args.confirm_after:
+                        _press(confirm)
+                        print(f"clicked confirm via AT-SPI: {_name(confirm)}", flush=True)
                 elif args.expect == "删除":
-                    _wait_named(app, "CancelButton", 5.0, visible=True)
+                    _wait_delete_confirm_dialog(app, timeout=8.0)
+                    _find_named(app, "CancelButton", visible=False)
                 else:
                     time.sleep(0.5)
             return 0

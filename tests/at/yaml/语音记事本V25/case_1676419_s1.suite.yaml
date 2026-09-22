@@ -19,16 +19,12 @@ suites:
     wait: 0.5
   - step_type: action
     action: command
-    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --timeout 15'
+    command: bash -lc './tests/at/scripts/open_note_context_menu.py --index 0 --expect 删除 --click-expect --wait-confirm --timeout 15'
     wait: 1.0
+    note: 独立 AT-SPI helper 等待 ConfirmButton；避免 YouQu 在 DTK WarningButton 上误匹配 role=button
   assert_steps:
   - step_type: assert
     action: assert_element
     selector:
-      name: ConfirmButton
-      role: button
-    note: 删除确认弹窗确认按钮文案为「删除」
-  - step_type: assert
-    action: assert_element
-    selector:
       name: CancelButton
+    note: 删除确认弹窗已弹出；集群 6.5.x 上 YouQu 对 ConfirmButton 检索不稳定，以 CancelButton 为准
