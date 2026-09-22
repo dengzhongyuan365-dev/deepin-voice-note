@@ -107,6 +107,81 @@ def _press(node) -> None:
     node.do_action(0)
 
 
+def _pointer_click(x: int, y: int) -> None:
+    """Real pointer click. AT-SPI Press does not emit RadioButton.onClicked."""
+    import subprocess
+    from ctypes import CDLL, c_int, c_uint, c_ulong, c_void_p
+
+    try:
+        subprocess.check_call(
+            ["xdotool", "mousemove", "--sync", str(x), str(y), "click", "1"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+
+    x11 = CDLL("libX11.so.6")
+    xtst = CDLL("libXtst.so.6")
+    x11.XOpenDisplay.argtypes = [c_void_p]
+    x11.XOpenDisplay.restype = c_void_p
+    x11.XDefaultRootWindow.argtypes = [c_void_p]
+    x11.XDefaultRootWindow.restype = c_ulong
+    x11.XWarpPointer.argtypes = [
+        c_void_p, c_ulong, c_ulong, c_int, c_int, c_uint, c_uint, c_int, c_int,
+    ]
+    x11.XFlush.argtypes = [c_void_p]
+    x11.XCloseDisplay.argtypes = [c_void_p]
+    xtst.XTestFakeButtonEvent.argtypes = [c_void_p, c_uint, c_int, c_ulong]
+    display = x11.XOpenDisplay(None)
+    if not display:
+        raise RuntimeError("cannot open X display to click InternalRadioButton")
+    root = x11.XDefaultRootWindow(display)
+    x11.XWarpPointer(display, c_ulong(0), root, 0, 0, 0, 0, x, y)
+    xtst.XTestFakeButtonEvent(display, 1, 1, 0)
+    x11.XFlush(display)
+    time.sleep(0.05)
+    xtst.XTestFakeButtonEvent(display, 1, 0, 0)
+    x11.XFlush(display)
+    x11.XCloseDisplay(display)
+
+
+def _saved_audio_source():
+    import os
+
+    path = os.path.expanduser("~/.config/deepin/deepin-voice-note/config.conf")
+    try:
+        text = open(path, encoding="utf-8", errors="ignore").read()
+    except OSError:
+        return None
+    for raw in text.splitlines():
+        line = raw.replace(" ", "")
+        if "audiosource.select=" in line or line.startswith("select="):
+            try:
+                return int(line.rsplit("=", 1)[1])
+            except ValueError:
+                continue
+    return None
+
+
+def _select_internal_radio(app, name: str, timeout: float) -> None:
+    target = _wait_for_name(app, name, timeout, visible=True)
+    ext = _visible_extents(target)
+    if ext is None:
+        raise RuntimeError(f"{name} is not visible")
+    x = int(ext.x + ext.width / 2)
+    y = int(ext.y + ext.height / 2)
+    _pointer_click(x, y)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _saved_audio_source() == 0:
+            print(f"titlebar_menu_press.py: {name} selected internal audio", flush=True)
+            return
+        time.sleep(0.2)
+    raise RuntimeError(f"{name} click did not switch audio source to internal")
+
+
 def _wait_for_name(root, name: str, timeout: float, visible: bool = False):
     deadline = time.time() + timeout
     last_error = None
@@ -203,7 +278,10 @@ def main() -> int:
         if args.wait_visible:
             app = _find_app(args.app)
             _wait_for_name(app, args.wait_visible, args.timeout, visible=True)
-        if args.click_visible:
+        if args.click_visible == "InternalRadioButton":
+            app = _find_app(args.app)
+            _select_internal_radio(app, args.click_visible, args.timeout)
+        elif args.click_visible:
             app = _find_app(args.app)
             target = _wait_for_name(app, args.click_visible, args.timeout, visible=True)
             _press(target)

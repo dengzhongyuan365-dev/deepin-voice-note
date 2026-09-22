@@ -4,7 +4,7 @@ module: base_flow
 setup:
 - action: session_start
   command: >-
-    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || [ "$SINK" = null-sink ]; then SINK=$(pactl list short sinks | awk '\''$2 != "null-sink" {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || echo "$SINK" | grep -qi null; then SINK=$(pactl list short sinks 2>/dev/null | awk '\''$2 !~ /null/i {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
   wait: 8.0
 teardown:
 - action: session_stop
@@ -35,6 +35,15 @@ suites:
       name: NewNoteButton
     do: click
     wait: 1.0
+  - step_type: action
+    action: mouse_click
+    selector:
+      name: NoteContentWebView
+    wait: 0.3
+  - step_type: action
+    action: keyboard_type
+    text: at_record_seed
+    wait: 0.4
   - step_type: action
     action: webengine_eval_js
     value:

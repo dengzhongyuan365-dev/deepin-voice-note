@@ -4,7 +4,7 @@ module: voice_ai
 setup:
 - action: session_start
   command: >-
-    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
+    bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=9222; SINK=$(pactl get-default-sink 2>/dev/null || true); if [ -z "$SINK" ] || echo "$SINK" | grep -qi null; then SINK=$(pactl list short sinks 2>/dev/null | awk '\''$2 !~ /null/i {print $2; exit}'\''); fi; if [ -n "$SINK" ]; then pactl set-default-sink "$SINK" 2>/dev/null || true; pactl set-default-source "$SINK.monitor" 2>/dev/null || true; fi; exec ./tests/at/setup_voice_note_at.sh'
   wait: 8.0
 teardown:
 - action: session_stop
@@ -13,6 +13,15 @@ suites:
   name: 录音过程中语音转文字入口
   description: 覆盖1635031；先录一条语音再开新录音，录音中右键已有语音块尝试「语音转文字」，验证录音条仍在且主界面可用（菜单置灰人工）
   steps:
+  - step_type: action
+    action: command
+    command: bash -lc './tests/at/scripts/titlebar_menu_press.py --select SettingsMenuItem --wait-visible InternalRadioButton --click-visible InternalRadioButton --timeout 8'
+    wait: 1.5
+    note: 设置录制内部音频，保证环回可被录音
+  - step_type: action
+    action: keyboard_hot_key
+    key: alt+F4
+    wait: 1.0
   - step_type: action
     action: element_action
     selector:
