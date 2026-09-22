@@ -17,7 +17,11 @@ _sink_is_null() {
 
 SINK="$(pactl get-default-sink 2>/dev/null || true)"
 if _sink_is_null "${SINK}"; then
-    SINK="$(pactl list short sinks 2>/dev/null | awk '$2 !~ /null/i {print $2; exit}')"
+    SINK="$(pactl list short sinks 2>/dev/null | awk 'tolower($2) !~ /null/ {print $2; exit}')"
+fi
+if _sink_is_null "${SINK}"; then
+    echo "play_loopback: no non-null Pulse sink available" >&2
+    exit 1
 fi
 if [[ -n "${SINK}" ]]; then
     pactl set-default-sink "${SINK}" >/dev/null 2>&1 || true
