@@ -1,0 +1,691 @@
+name: 真实混合列表反向选区与历史探测
+app: deepin-voice-note
+description: 普通段落全选创建有序；三级混排、中途创建新项、反向选区、颜色、批量缩进反缩进、统一转换、连续三步Undo/Redo
+module: 列表门禁
+tags:
+- gate
+- discovery
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: journey_reverse_mixed_selection_history
+  name: 12项→14项→三类型二三级混排→反向选区→颜色→Tab/ShiftTab→转换→三步Undo/Redo
+  tags:
+  - gate
+  - discovery
+  - real-input
+  - mixed
+  - reverse-selection
+  - history
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: keyboard_type
+    text: A
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: B
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: C
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: D
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: E
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: F
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: G
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: H
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: I
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: J
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: K
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: L
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("twelve_plain_paragraphs_converted_together", [["A", "ordered", 1, null, 1], ["B", "ordered", 1, null, 2], ["C", "ordered", 1, null, 3], ["D", "ordered",
+        1, null, 4], ["E", "ordered", 1, null, 5], ["F", "ordered", 1, null, 6], ["G", "ordered", 1, null, 7], ["H", "ordered", 1, null, 8], ["I", "ordered", 1, null, 9], ["J", "ordered",
+        1, null, 10], ["K", "ordered", 1, null, 11], ["L", "ordered", 1, null, 12]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 1
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 3
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 4
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 5
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 6
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 8
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 9
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 10
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("two_and_three_level_numbering", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "ordered", 3, null, 1], ["D", "ordered", 3,
+        null, 2], ["E", "ordered", 2, null, 2], ["F", "ordered", 3, null, 1], ["G", "ordered", 3, null, 2], ["H", "ordered", 1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered",
+        3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 3
+      journey_kind: text
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 5
+      journey_kind: text
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 6
+      journey_kind: text
+    wait_after: 400
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("four_local_conversions_preserve_outer_numbering", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["D",
+        "bullet", 3, null, null], ["E", "ordered", 2, null, 2], ["F", "task", 3, false, null], ["G", "bullet", 3, null, null], ["H", "ordered", 1, null, 2], ["I", "ordered", 2, null,
+        1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 4
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: EC
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("new_second_level_item_then_tab_to_third", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["D", "bullet",
+        3, null, null], ["E", "ordered", 2, null, 2], ["EC", "ordered", 3, null, 1], ["F", "task", 3, false, null], ["G", "bullet", 3, null, null], ["H", "ordered", 1, null, 2], ["I",
+        "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: C2
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("new_third_level_task_by_enter", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "task", 3, false,
+        null], ["D", "bullet", 3, null, null], ["E", "ordered", 2, null, 2], ["EC", "ordered", 3, null, 1], ["F", "task", 3, false, null], ["G", "bullet", 3, null, null], ["H", "ordered",
+        1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 8
+      journey_kind: text
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+up
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+up
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+up
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+up
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+up
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+home
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const ed=window.__dvnTiptapEditor; const selected=ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to, '\n').replace(/\s/g,''); const dom=window.getSelection().toString().replace(/\s/g,'');
+        if(selected!=='C2DEECFG'||dom!=='C2DEECFG') throw new Error(JSON.stringify({selected,dom,selection:ed.state.selection.toJSON()})); return true })()
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("reverse_selection_mixed_to_ordered", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered",
+        3, null, 1], ["D", "ordered", 3, null, 2], ["E", "ordered", 2, null, 2], ["EC", "ordered", 3, null, 1], ["F", "ordered", 3, null, 2], ["G", "ordered", 3, null, 3], ["H", "ordered",
+        1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=foreColor]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__journeyBlue=document.querySelector('[data-panel=foreColor] button:nth-child(4)').dataset.color; true
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=foreColor] button:nth-child(4)'
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("multi_tab_cap_and_continue_numbers", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered",
+        3, null, 1], ["D", "ordered", 3, null, 2], ["E", "ordered", 3, null, 3], ["EC", "ordered", 3, null, 4], ["F", "ordered", 3, null, 5], ["G", "ordered", 3, null, 6], ["H", "ordered",
+        1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("multi_shift_tab_all_selected_rows_to_second", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2",
+        "ordered", 2, null, 2], ["D", "ordered", 2, null, 3], ["E", "ordered", 2, null, 4], ["EC", "ordered", 2, null, 5], ["F", "ordered", 2, null, 6], ["G", "ordered", 2, null, 7],
+        ["H", "ordered", 1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("partial_selection_unified_to_task", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "task",
+        2, false, null], ["D", "task", 2, false, null], ["E", "task", 2, false, null], ["EC", "task", 2, false, null], ["F", "task", 2, false, null], ["G", "task", 2, false, null], ["H",
+        "ordered", 1, null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("undo_task_conversion", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered", 2, null, 2],
+        ["D", "ordered", 2, null, 3], ["E", "ordered", 2, null, 4], ["EC", "ordered", 2, null, 5], ["F", "ordered", 2, null, 6], ["G", "ordered", 2, null, 7], ["H", "ordered", 1, null,
+        2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("undo_outdent", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered", 3, null, 1], ["D",
+        "ordered", 3, null, 2], ["E", "ordered", 3, null, 3], ["EC", "ordered", 3, null, 4], ["F", "ordered", 3, null, 5], ["G", "ordered", 3, null, 6], ["H", "ordered", 1, null, 2],
+        ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("undo_indent", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered", 3, null, 1], ["D",
+        "ordered", 3, null, 2], ["E", "ordered", 2, null, 2], ["EC", "ordered", 3, null, 1], ["F", "ordered", 3, null, 2], ["G", "ordered", 3, null, 3], ["H", "ordered", 1, null, 2],
+        ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("redo_indent", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered", 3, null, 1], ["D",
+        "ordered", 3, null, 2], ["E", "ordered", 3, null, 3], ["EC", "ordered", 3, null, 4], ["F", "ordered", 3, null, 5], ["G", "ordered", 3, null, 6], ["H", "ordered", 1, null, 2],
+        ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("redo_outdent", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "ordered", 2, null, 2], ["D",
+        "ordered", 2, null, 3], ["E", "ordered", 2, null, 4], ["EC", "ordered", 2, null, 5], ["F", "ordered", 2, null, 6], ["G", "ordered", 2, null, 7], ["H", "ordered", 1, null, 2],
+        ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("redo_task_conversion", [["A", "ordered", 1, null, 1], ["B", "ordered", 2, null, 1], ["C", "task", 3, false, null], ["C2", "task", 2, false, null],
+        ["D", "task", 2, false, null], ["E", "task", 2, false, null], ["EC", "task", 2, false, null], ["F", "task", 2, false, null], ["G", "task", 2, false, null], ["H", "ordered", 1,
+        null, 2], ["I", "ordered", 2, null, 1], ["J", "ordered", 3, null, 1], ["K", "ordered", 2, null, 2], ["L", "ordered", 1, null, 3]])
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const paragraphs=[...document.querySelectorAll('.ProseMirror p')]; const colors=paragraphs.map(paragraph=>getComputedStyle(paragraph.querySelector('span')||paragraph).color); for(let
+        index=3;index<=8;index++) if(colors[index]!==window.__journeyBlue) throw new Error(JSON.stringify({index,colors,expected:window.__journeyBlue})); return colors })()
+    wait_after: 200

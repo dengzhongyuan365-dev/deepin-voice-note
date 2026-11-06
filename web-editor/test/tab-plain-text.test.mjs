@@ -221,6 +221,41 @@ for (const spec of [
   }
 }
 
+function listTypeForText(node, text, insideType = null) {
+  if (Array.isArray(node.content)) {
+    if (['bulletList', 'orderedList', 'taskList'].includes(node.type)) insideType = node.type
+    for (const child of node.content) {
+      const found = listTypeForText(child, text, insideType)
+      if (found) return found
+    }
+  }
+  if (node.text === text) return insideType
+  return null
+}
+
+function itemVisualDepthForText(doc, text, structuralDepth = 0) {
+  let found = null
+  doc.descendants((node) => {
+    if (found != null) return false
+    if (node.type.name === 'listItem' || node.type.name === 'taskItem') {
+      const own = node.firstChild?.textContent || ''
+      const depth = structuralDepth + 1 + Number(node.attrs?.dvnIndentLevel || 0)
+      if (own === text) {
+        found = depth
+        return false
+      }
+      node.forEach((child) => {
+        if (found == null && ['bulletList', 'orderedList', 'taskList'].includes(child.type.name)) {
+          found = itemVisualDepthForText(child, text, structuralDepth + 1)
+        }
+      })
+      return false
+    }
+    return true
+  })
+  return found
+}
+
 const LIST_CASES = [
   {
     name: '无序列表',
@@ -240,14 +275,17 @@ const LIST_CASES = [
 ]
 
 for (const spec of LIST_CASES) {
-  test(`${spec.name}选中文本按 Tab 替换为 4 个 NBSP，不改变列表状态`, () => {
+  test(`${spec.name}选中非首子项文字按 Tab：列表项缩进且文字不替换`, () => {
     const window = setupDom()
     const target = 'A-B-C-D'
     const editor = createEditor(window, {
       type: 'doc',
       content: [list(spec.listType, [
         spec.makeItem('父项', [
-          list(spec.listType, [spec.makeItem(target, [], { checked: true })]),
+          list(spec.listType, [
+            spec.makeItem('前置子项', [], { checked: false }),
+            spec.makeItem(target, [], { checked: false }),
+          ]),
         ]),
       ])],
     })
@@ -256,14 +294,12 @@ for (const spec of LIST_CASES) {
     editor.chain().focus().setTextSelection({ from: range.from + 2, to: range.from + 4 }).run()
 
     const event = pressTab(editor, window)
-    const after = editor.getJSON()
-    const nestedItem = after.content[0].content[0].content[1].content[0]
     assert.equal(event.defaultPrevented, true)
-    assert.equal(nestedItem.content[0].content[0].text, `A-${PLAIN_TAB}C-D`)
-    assert.equal(nestedItem.type, spec.listType === 'taskList' ? 'taskItem' : 'listItem')
-    assert.equal(nestedItem.attrs.checked, spec.listType === 'taskList' ? true : undefined)
-    assert.equal(after.content[0].type, spec.listType, '列表类型不能变化')
-    assert.equal(editor.state.selection.empty, true)
+    assert.equal(itemVisualDepthForText(editor.state.doc, '前置子项'), 2)
+    assert.equal(itemVisualDepthForText(editor.state.doc, target), 3)
+    assert.equal(listTypeForText(editor.getJSON(), target), spec.listType, '列表类型不能变化')
+    assert.equal(editor.state.doc.textContent.includes(target), true, '选中文字不能被 NBSP 替换')
+    assert.equal(editor.state.selection.empty, false, '缩进后应保留原选区')
 
     editor.commands.undo()
     assert.deepEqual(editor.getJSON(), before, '一次撤销必须恢复原文和列表状态')
@@ -271,7 +307,7 @@ for (const spec of LIST_CASES) {
   })
 }
 
-test('Ctrl+A 全选后按 Tab 仍替换为纯文本空格，不执行列表缩进', () => {
+test('Ctrl+A 全选列表后按 Tab 不能把正文替换成纯文本空格', () => {
   const window = setupDom()
   const editor = createEditor(window, {
     type: 'doc',
@@ -284,7 +320,36 @@ test('Ctrl+A 全选后按 Tab 仍替换为纯文本空格，不执行列表缩�
 
   const event = pressTab(editor, window)
   assert.equal(event.defaultPrevented, true)
-  assert.equal(editor.state.doc.textContent, PLAIN_TAB)
-  assert.equal(editor.state.selection.empty, true)
+  assert.equal(editor.state.doc.textContent, '父项子项')
+  assert.notEqual(editor.state.doc.textContent, PLAIN_TAB)
+  editor.destroy()
+})
+
+test('普通段落与三种列表混合选区按 Tab 不能替换正文', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [
+      paragraph('P'),
+      list('bulletList', [listItem('A')]),
+      list('orderedList', [listItem('B')]),
+      list('taskList', [taskItem('C')]),
+    ],
+  })
+  const p = findTextRange(editor, 'P')
+  const c = findTextRange(editor, 'C')
+  editor.chain().focus().setTextSelection({ from: p.from, to: c.to }).run()
+
+  const event = pressTab(editor, window)
+  const json = editor.getJSON()
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(editor.state.doc.textContent, `${PLAIN_TAB}PABC`)
+  assert.equal(listTypeForText(json, 'A'), 'bulletList')
+  assert.equal(listTypeForText(json, 'B'), 'orderedList')
+  assert.equal(listTypeForText(json, 'C'), 'taskList')
+  assert.equal(itemVisualDepthForText(editor.state.doc, 'A'), 2)
+  assert.equal(itemVisualDepthForText(editor.state.doc, 'B'), 2)
+  assert.equal(itemVisualDepthForText(editor.state.doc, 'C'), 2)
+  assert.equal(editor.state.selection.empty, false)
   editor.destroy()
 })

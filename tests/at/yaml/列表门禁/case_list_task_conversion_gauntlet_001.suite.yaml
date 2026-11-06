@@ -1,0 +1,295 @@
+name: 16 节点混合树连续转换长链：任务/无序/有序/普通文本多次切换门禁
+app: deepin-voice-note
+description: 同一混合视觉树中 B1 连续执行任务→无序→有序→任务→普通文本→无序→有序→Shift+Tab 两级→任务，每一步全文核对类型、层级、勾选、两段有序编号和 Undo/Redo。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- ordered
+- undo
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: task_conversion_gauntlet_mixed_tree
+  name: B1 九次转换长链与两段有序编号稳定性
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - ordered
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "attrs": {}, "content": [{"type": "taskItem",
+        "attrs": {"checked": false, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "ROOT"}]}]}]}, {"type":
+        "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "C1"}]}]}, {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "C2"}]}]}]}, {"type": "orderedList", "attrs": {"start": 1}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel":
+        1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "O1"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content":
+        [{"type": "paragraph", "content": [{"type": "text", "text": "O2"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type":
+        "paragraph", "content": [{"type": "text", "text": "O3"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked":
+        false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "B1"}]}]}]}, {"type": "taskList", "attrs": {},
+        "content": [{"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text",
+        "text": "B1a"}]}]}, {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type":
+        "text", "text": "B1b"}]}]}]}, {"type": "orderedList", "attrs": {"start": 1}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel": 2}, "content":
+        [{"type": "paragraph", "content": [{"type": "text", "text": "P1"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 2}, "content": [{"type":
+        "paragraph", "content": [{"type": "text", "text": "P2"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "B2"}]}]}]}, {"type": "bulletList", "attrs":
+        {}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "U1"}]}]},
+        {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "U2"}]}]}]}, {"type":
+        "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "B3"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel":
+        0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "TAIL"}]}]}]}]});true'
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_initial",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 2, false, null], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_bullet1",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "bullet", 2, null, null], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_ordered1",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "ordered", 2, null, 4], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_task1",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 2, false, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_plain",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_bullet2",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "bullet", 2, null, null], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_ordered2",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "ordered", 2, null, 4], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_shift1",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "ordered", 1, null, 1], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_plain2",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_task2",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_undo",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("conversion_gauntlet_redo",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250

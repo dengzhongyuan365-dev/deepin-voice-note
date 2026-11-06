@@ -158,6 +158,70 @@ function itemSnapshot(doc) {
   return result
 }
 
+function rawItemSnapshot(doc) {
+  const result = []
+  const walkDescendants = (node, listDepth = 0) => {
+    node.forEach((child) => {
+      if (LIST_TYPES.includes(child.type.name)) walkList(child, listDepth)
+      else walkDescendants(child, listDepth)
+    })
+  }
+  const walkList = (listNode, listDepth) => {
+    const start = listNode.type.name === 'orderedList' ? Number(listNode.attrs?.start ?? 1) : null
+    listNode.forEach((listItem, _offset, index) => {
+      result.push({
+        text: listItem.firstChild?.textContent ?? '',
+        itemType: listItem.type.name,
+        listType: listNode.type.name,
+        depth: listDepth + Math.max(0, Math.floor(Number(listItem.attrs?.dvnIndentLevel) || 0)),
+        checked: listNode.type.name === 'taskList' ? Boolean(listItem.attrs?.checked) : null,
+        number: start == null ? null : start + index,
+      })
+      walkDescendants(listItem, listDepth + 1)
+    })
+  }
+  walkDescendants(doc)
+  return result
+}
+
+function complexFlatMixedDocument() {
+  return {
+    type: 'doc',
+    content: [
+      list('taskList', [
+        item('taskList', 'T1', [], { checked: true }),
+        item('taskList', 'T2', [], { checked: false }),
+      ]),
+      list('bulletList', [
+        item('bulletList', 'U1'),
+        item('bulletList', 'U2'),
+        item('bulletList', 'U3'),
+      ]),
+      paragraph('P0'),
+      list('bulletList', [
+        item('bulletList', 'A', [
+          list('orderedList', [
+            item('orderedList', 'O1'),
+            item('orderedList', 'O2'),
+            item('orderedList', 'O3'),
+            item('orderedList', 'B1'),
+          ]),
+        ]),
+      ]),
+      list('taskList', [
+        item('taskList', 'T3', [], { checked: true }),
+        item('taskList', 'T4', [], { checked: true }),
+      ]),
+      list('orderedList', [
+        item('orderedList', 'O4'),
+        item('orderedList', 'O5'),
+        item('orderedList', 'O6'),
+      ]),
+      paragraph('P1'),
+    ],
+  }
+}
+
 function withoutNumbers(entries) {
   return entries.map(({ number: _number, ...entry }) => entry)
 }
@@ -248,13 +312,25 @@ test('折叠光标 × 3 类型 × 3 层叶子 × 3 光标位置：只取消目�
 
             assert.equal(toggleActiveListFormatting(editor, type), true, `${label}: 重应用未处理`)
             assert.deepEqual(textOrder(editor.state.doc), before.map((entry) => entry.text), `${label}: 重应用后文本顺序变化`)
-            assert.deepEqual(withoutNumbers(itemSnapshot(editor.state.doc).filter((entry) => entry.text !== target)), withoutNumbers(untouched), `${label}: 重应用改变了未选中项`)
+            // 重新应用待办会创建 *未勾选* 新子项；其视觉祖先必须同步
+            // 变为未完成。这不是误改未选中项，只能要求其他项原样保留。
+            const expectedAfterReapply = untouched.map((entry) => ({ ...entry }))
+            if (type === 'taskList' && checked === true && (target === 'C' || target === 'D')) {
+              for (const entry of expectedAfterReapply) {
+                if (entry.text === 'A' || (target === 'C' && entry.text === 'B')) entry.checked = false
+              }
+            }
+            assert.deepEqual(withoutNumbers(itemSnapshot(editor.state.doc).filter((entry) => entry.text !== target)), withoutNumbers(expectedAfterReapply), `${label}: 重应用改变了非祖先项或未重算视觉父项`)
             assert.deepEqual(contextForText(editor, target), { listTypes: [type], itemTypes: [ITEM_TYPES[type]] }, `${label}: 重应用出现多余层级`)
             assert.equal(editor.state.selection.$from.parent.textContent, target, `${label}: 重应用后光标落错`)
             assert.equal(editor.state.selection.$from.parentOffset, offset, `${label}: 重应用后光标偏移漂移`)
 
             assert.equal(toggleActiveListFormatting(editor, type), true, `${label}: 二次取消未处理`)
-            assert.deepEqual(withoutNumbers(itemSnapshot(editor.state.doc)), withoutNumbers(untouched), `${label}: 二次取消改变了未选中项`)
+            const expectedAfterSecondCancel = type === 'taskList' && checked === true && target === 'C'
+              ? expectedAfterReapply : untouched
+            assert.deepEqual(withoutNumbers(itemSnapshot(editor.state.doc)), withoutNumbers(expectedAfterSecondCancel), `${label}: 二次取消改变了非祖先项`)
+            // B 在子项 C 消失后成为叶子项：没有新的用户勾选动作时，
+            // 不得凭空恢复到早期的 checked=true；A 随 B 保持未完成。
             assert.deepEqual(contextForText(editor, target), { listTypes: [], itemTypes: [] }, `${label}: 二次取消后仍有列表层级`)
           } catch (error) {
             failures.push(error.message)
@@ -1021,4 +1097,115 @@ test('三级项内中间段落转换时保持文本顺序，不能被释放到�
     }, beforeSelection, `${targetType}: 光标离开目标段落或偏移漂移`)
     editor.destroy()
   }
+})
+
+test('待办 Shift+Tab 成普通文本后重新应用待办，父项按已完成子项恢复勾选', () => {
+  const { editor, window } = createEditor({
+    type: 'doc',
+    content: [list('taskList', [
+      item('taskList', 'DSAD', [], { dvnIndentLevel: 1, checked: true }),
+      item('taskList', 'DSA', [], { dvnIndentLevel: 1, checked: true }),
+      item('taskList', 'DAS', [], { dvnIndentLevel: 1, checked: true }),
+    ])],
+  })
+  setCursor(editor, 'DSAD', 2)
+  assert.equal(pressTab(editor, window, true).defaultPrevented, true)
+  assert.equal(pressTab(editor, window, true).defaultPrevented, true)
+  assert.equal(contextForText(editor, 'DSAD').listTypes.length, 0, 'DSAD 应先退出成普通文本')
+  assert.equal(toggleActiveListFormatting(editor, 'taskList'), true)
+  const items = []
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === 'taskItem') {
+      items.push({ text: node.firstChild.textContent, checked: Boolean(node.attrs.checked) })
+    }
+    return true
+  })
+  assert.deepEqual(items, [
+    { text: 'DSAD', checked: true },
+    { text: 'DSA', checked: true },
+    { text: 'DAS', checked: true },
+  ], '视觉子项全部完成时，转回待办的 DSAD 父项应恢复勾选')
+  editor.destroy()
+})
+
+test('普通文本转待办时父项按视觉子项归一化：全勾选为勾选，任一未勾选为未勾选', () => {
+  for (const childStates of [[true, true], [true, false], [false, false]]) {
+    const { editor } = createEditor({
+      type: 'doc',
+      content: [
+        paragraph('DSAD'),
+        list('taskList', [
+          item('taskList', 'DSA', [], { dvnIndentLevel: 1, checked: childStates[0] }),
+          item('taskList', 'DAS', [], { dvnIndentLevel: 1, checked: childStates[1] }),
+        ]),
+      ],
+    })
+    setCursor(editor, 'DSAD', 2)
+    assert.equal(toggleActiveListFormatting(editor, 'taskList'), true)
+    const items = []
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'taskItem') {
+        items.push({ text: node.firstChild.textContent, checked: Boolean(node.attrs.checked) })
+      }
+      return true
+    })
+    assert.deepEqual(items, [
+      { text: 'DSAD', checked: childStates.every(Boolean) },
+      { text: 'DSA', checked: childStates[0] },
+      { text: 'DAS', checked: childStates[1] },
+    ], `子项状态 ${childStates} 时 DSAD 父项归一化错误`)
+    editor.destroy()
+  }
+})
+
+test('16 节点混合树连续转换长链：任务/无序/有序/普通文本九次切换后层级序号勾选均稳定', () => {
+  const { editor, window } = createEditor({ type: 'doc', content: [paragraph('')] })
+  editor.commands.setContent(complexFlatMixedDocument())
+  const initial = itemSnapshot(editor.state.doc)
+  const rawInitial = rawItemSnapshot(editor.state.doc)
+  const b1Before = initial.find((entry) => entry.text === 'B1')
+  const orderedBefore = initial.filter((entry) => entry.listType === 'orderedList' && entry.text !== 'B1')
+
+  const expectB1 = (expected) => {
+    const after = itemSnapshot(editor.state.doc)
+    assert.deepEqual(
+      rawItemSnapshot(editor.state.doc).filter((entry) => entry.text !== 'B1'),
+      rawInitial.filter((entry) => entry.text !== 'B1'),
+      'B1 转换让其他节点的真实视觉深度发生漂移',
+    )
+    const b1 = after.find((entry) => entry.text === 'B1')
+    if (!expected) {
+      assert.equal(b1, undefined, 'B1 应处于普通文本状态')
+    } else {
+      assert.deepEqual(b1, { ...b1Before, ...expected }, 'B1 转换后的类型/层级/勾选不符合预期')
+    }
+    assert.deepEqual(after.filter((entry) => entry.text !== 'B1'), initial.filter((entry) => entry.text !== 'B1'), 'B1 转换污染了其他节点')
+    assert.deepEqual(after.filter((entry) => entry.listType === 'orderedList' && entry.text !== 'B1'), orderedBefore, 'B1 转换破坏了两段有序列表编号')
+    return after
+  }
+
+  setCursor(editor, 'B1', 2)
+  assert.equal(toggleActiveListFormatting(editor, 'bulletList'), true)
+  expectB1({ itemType: 'listItem', listType: 'bulletList', checked: null, number: null })
+  assert.equal(toggleActiveListFormatting(editor, 'orderedList'), true)
+  expectB1({ itemType: 'listItem', listType: 'orderedList', checked: null, number: 4 })
+  assert.equal(toggleActiveListFormatting(editor, 'taskList'), true)
+  expectB1({ itemType: 'taskItem', listType: 'taskList', checked: false, number: null })
+  assert.equal(toggleActiveListFormatting(editor, 'taskList'), true)
+  expectB1(null)
+
+  setCursor(editor, 'B1', 2)
+  assert.equal(toggleActiveListFormatting(editor, 'bulletList'), true)
+  expectB1({ itemType: 'listItem', listType: 'bulletList', depth: 1, checked: null, number: null })
+  assert.equal(toggleActiveListFormatting(editor, 'orderedList'), true)
+  expectB1({ itemType: 'listItem', listType: 'orderedList', depth: 1, checked: null, number: 4 })
+  assert.equal(pressTab(editor, window, true).defaultPrevented, true)
+  expectB1({ itemType: 'listItem', listType: 'orderedList', depth: 0, checked: null, number: 1 })
+  assert.equal(pressTab(editor, window, true).defaultPrevented, true)
+  expectB1(null)
+  setCursor(editor, 'B1', 2)
+  assert.equal(toggleActiveListFormatting(editor, 'taskList'), true)
+  expectB1({ itemType: 'taskItem', listType: 'taskList', depth: 0, checked: false, number: null })
+
+  editor.destroy()
 })

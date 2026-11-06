@@ -2233,11 +2233,8 @@ test('task list style keeps checkbox and text on the same row', () => {
   const style = document.getElementById('dvn-tiptap-tasklist-style')
   assert.ok(style, 'task list style should be injected')
   assert.match(style.textContent, /ul\[data-type="taskList"\] \{ list-style: none; padding-left: 0;/)
-  assert.match(style.textContent, /ul\[data-type="taskList"\] ul\[data-type="taskList"\] \{ padding-left: 20px;/)
-  assert.match(style.textContent, /ul\[data-type="taskList"\] > li > div > ul\[data-type="taskList"\] \{ margin-left: -20px;/)
-  assert.match(style.textContent, /ul\[data-type="taskList"\] > li > div > ul\[data-type="taskList"\] > li > div > ul\[data-type="taskList"\] > li > div > ul\[data-type="taskList"\] \{ padding-left: 0;/)
-  assert.match(style.textContent, /ul\[data-type="taskList"\] > li\[data-dvn-indent-level="1"\] > div > ul\[data-type="taskList"\] \{ margin-left: -40px;/)
-  assert.match(style.textContent, /ul\[data-type="taskList"\] > li\[data-dvn-indent-level="2"\] > div > ul\[data-type="taskList"\] \{ margin-left: -60px;/)
+  assert.equal(style.textContent.includes('ul[data-type="taskList"] ul[data-type="taskList"]'), false, 'nested task lists must use the same parent content-column indentation, not an extra task-only padding')
+  assert.equal(/ul\[data-type="taskList"\][^\n]*\{ margin-left: -/.test(style.textContent), false, 'task lists must not rely on task-only negative margin compensation')
   // 勾选框固定 13px，不跟随正文字号；label 与 • / 1. 用同一套“首行有效行盒”
   // 跟踪规则，折行/多段时仍钉在首行，不会掉到整个列表项中间。
   assert.match(style.textContent, /ul\[data-type="taskList"\] > li \{ display: flex; align-items: flex-start; gap: 0; \}/)
@@ -2815,7 +2812,7 @@ for (const { name, listType, itemType, attrs } of [
   { name: 'ordered list', listType: 'orderedList', itemType: 'listItem' },
   { name: 'task list', listType: 'taskList', itemType: 'taskItem', attrs: { checked: false } },
 ]) {
-  test(`indent button follows real sink capability for ${name}`, () => {
+  test(`indent button allows an orphan first item until level three for ${name}`, () => {
     const { editor, host } = createEditorWithToolbar()
     const item = (text) => ({
       type: itemType,
@@ -2833,7 +2830,7 @@ for (const { name, listType, itemType, attrs } of [
 
     editor.chain().focus().setTextSelection(findTextEndPosition(editor, 'one')).run()
     const indent = host.querySelector('button[data-format="indentList"]')
-    assert.equal(indent.disabled, true, `${name} first item cannot be indented`)
+    assert.equal(indent.disabled, false, `${name} first item can become a visual level-two orphan`)
 
     editor.chain().focus().setTextSelection(findTextEndPosition(editor, 'two')).run()
     assert.equal(indent.disabled, false, `${name} item with a previous sibling can be indented`)
@@ -3537,7 +3534,7 @@ test('indent button follows real sink capability inside lists', () => {
   assert.equal(outdent.disabled, true, 'outdent disabled in paragraph')
 
   host.querySelector('button[data-format="bulletList"]').click()
-  assert.equal(indent.disabled, true, 'single list item has no previous sibling to indent under')
+  assert.equal(indent.disabled, false, 'single list item can become a visual level-two orphan')
   assert.equal(outdent.disabled, true, 'outdent disabled at first list level because Shift+Tab no longer exits lists')
   editor.destroy()
 })
@@ -4037,7 +4034,7 @@ test('color input persists across typing and paragraph breaks, but not a move to
   editor.destroy()
 })
 
-test('font color button reapplies color but highlight button toggles it off', () => {
+test('font and background color main buttons reapply their remembered colors without toggling off', () => {
   const { editor, host } = createEditorWithToolbar()
   const fore = FORE_COLORS[0][3]
   const back = BACK_COLORS[0][1]
@@ -4050,8 +4047,256 @@ test('font color button reapplies color but highlight button toggles it off', ()
   host.querySelector('[data-format="backColor"]').click()
   insertText(editor, 'second')
   assert.equal(textMarkAttrs(editor, 'second', 'color').color, fore)
-  assert.equal(textHasMark(editor, 'second', 'highlight'), false)
+  assert.equal(textMarkAttrs(editor, 'second', 'highlight').color, back)
   assert.equal(host.querySelector('[data-format="backColor"]').style.getPropertyValue('--dvn-current-color'), back)
+  editor.destroy()
+})
+
+test('repeated main color buttons on a text selection do not erase applied text or background color', () => {
+  const { editor, host } = createEditorWithToolbar()
+  editor.commands.setContent({ type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'selected' }] },
+    { type: 'paragraph', content: [{ type: 'text', text: 'plain' }] },
+  ] })
+  const fore = FORE_COLORS[0][3]
+  const back = BACK_COLORS[0][1]
+  editor.commands.setTextSelection(findTextRange(editor, 'selected'))
+  host.querySelector(`[data-panel="foreColor"] button[data-color="${fore}"]`).click()
+  host.querySelector(`[data-panel="backColor"] button[data-color="${back}"]`).click()
+  for (let index = 0; index < 3; index += 1) {
+    host.querySelector('[data-format="foreColor"]').click()
+    host.querySelector('[data-format="backColor"]').click()
+    assert.equal(textMarkAttrs(editor, 'selected', 'color').color, fore)
+    assert.equal(textMarkAttrs(editor, 'selected', 'highlight').color, back)
+    assert.equal(textHasMark(editor, 'plain', 'color'), false)
+    assert.equal(textHasMark(editor, 'plain', 'highlight'), false)
+  }
+  const nextBack = BACK_COLORS[0][3]
+  host.querySelector(`[data-panel="backColor"] button[data-color="${nextBack}"]`).click()
+  assert.equal(textMarkAttrs(editor, 'selected', 'highlight').color, nextBack)
+  host.querySelector('[data-format="backColor"]').click()
+  assert.equal(textMarkAttrs(editor, 'selected', 'highlight').color, nextBack)
+  host.querySelector('[data-panel="backColor"] button[data-color="transparent"]').click()
+  assert.equal(textHasMark(editor, 'selected', 'highlight'), false)
+  editor.destroy()
+})
+
+test('repeated main color buttons preserve colors for subsequent typing at a collapsed cursor', () => {
+  const { editor, host } = createEditorWithToolbar()
+  insertText(editor, 'seed')
+  const fore = FORE_COLORS[0][3]
+  const back = BACK_COLORS[0][1]
+  host.querySelector(`[data-panel="foreColor"] button[data-color="${fore}"]`).click()
+  host.querySelector(`[data-panel="backColor"] button[data-color="${back}"]`).click()
+  for (let index = 0; index < 3; index += 1) {
+    host.querySelector('[data-format="foreColor"]').click()
+    host.querySelector('[data-format="backColor"]').click()
+  }
+  insertText(editor, 'typed')
+  assert.equal(textMarkAttrs(editor, 'typed', 'color').color, fore)
+  assert.equal(textMarkAttrs(editor, 'typed', 'highlight').color, back)
+  editor.destroy()
+})
+
+function paragraphStartAt(editor, index) {
+  if (index < 0 || index >= editor.state.doc.childCount) throw new Error(`paragraph ${index} not found`)
+  let pos = 1
+  for (let current = 0; current < index; current += 1) {
+    pos += editor.state.doc.child(current).nodeSize
+  }
+  return pos
+}
+
+test('empty paragraph persists the full typing mark set after moving away and back', () => {
+  const { editor } = createEditorWithToolbar()
+  editor.commands.setContent({ type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'plain' }] },
+    { type: 'paragraph' },
+  ] })
+  const color = FORE_COLORS[0][3]
+  const back = BACK_COLORS[0][1]
+  editor.commands.setTextSelection(paragraphStartAt(editor, 1))
+  editor.chain()
+    .setMark('fontFamily', { fontFamily: '国标小标宋' })
+    .setMark('fontSize', { fontSize: '18px' })
+    .setMark('bold')
+    .setMark('color', { color })
+    .setHighlight({ color: back })
+    .run()
+
+  const persisted = editor.getJSON().content[1].attrs?.dvnTypingMarks
+  for (const type of ['fontFamily', 'fontSize', 'bold', 'color', 'highlight']) {
+    assert.ok(persisted?.some((mark) => mark.type === type), `${type} must be persisted on the empty paragraph`)
+  }
+
+  editor.commands.setTextSelection(findTextRange(editor, 'plain').to)
+  insertText(editor, 'PLAINADD')
+  assert.equal(textHasMark(editor, 'PLAINADD', 'highlight'), false)
+  assert.equal(textHasMark(editor, 'PLAINADD', 'color'), false)
+
+  editor.commands.setTextSelection(paragraphStartAt(editor, 1))
+  insertText(editor, 'STYLED')
+  assert.equal(textMarkAttrs(editor, 'STYLED', 'fontFamily').fontFamily, '国标小标宋')
+  assert.equal(textMarkAttrs(editor, 'STYLED', 'fontSize').fontSize, '18px')
+  assert.equal(textMarkAttrs(editor, 'STYLED', 'color').color, color)
+  assert.equal(textMarkAttrs(editor, 'STYLED', 'highlight').color, back)
+  assert.equal(textHasMark(editor, 'STYLED', 'bold'), true)
+  editor.destroy()
+})
+
+test('font size and bold survive typing into a middle blank paragraph after formatted text', () => {
+  const { editor } = createEditorWithToolbar()
+  editor.commands.setContent({ type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'formatted' }] },
+  ] })
+  const color = FORE_COLORS[0][3]
+  const back = BACK_COLORS[0][1]
+  editor.commands.setTextSelection(findTextRange(editor, 'formatted'))
+  editor.chain()
+    .setMark('fontFamily', { fontFamily: '国标小标宋' })
+    .setMark('fontSize', { fontSize: '18px' })
+    .setMark('bold')
+    .setMark('color', { color })
+    .setHighlight({ color: back })
+    .run()
+  editor.commands.setTextSelection(findTextRange(editor, 'formatted').to)
+  editor.commands.splitBlock()
+  editor.commands.splitBlock()
+  editor.commands.setTextSelection(paragraphStartAt(editor, 1))
+  insertText(editor, 'MIDDLE')
+  assert.equal(textMarkAttrs(editor, 'MIDDLE', 'fontFamily').fontFamily, '国标小标宋')
+  assert.equal(textMarkAttrs(editor, 'MIDDLE', 'fontSize').fontSize, '18px')
+  assert.equal(textMarkAttrs(editor, 'MIDDLE', 'color').color, color)
+  assert.equal(textMarkAttrs(editor, 'MIDDLE', 'highlight').color, back)
+  assert.equal(textHasMark(editor, 'MIDDLE', 'bold'), true)
+  editor.destroy()
+})
+
+test('deleting all styled text preserves its marks for the next input', () => {
+  const { editor } = createEditorWithToolbar()
+  const back = BACK_COLORS[0][1]
+  editor.commands.setContent({ type: 'doc', content: [{
+    type: 'paragraph',
+    content: [{
+      type: 'text',
+      text: 'remove',
+      marks: [{ type: 'highlight', attrs: { color: back } }, { type: 'bold' }],
+    }],
+  }] })
+  editor.commands.setTextSelection(findTextRange(editor, 'remove'))
+  editor.commands.deleteSelection()
+  assert.ok(editor.getJSON().content[0].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'))
+  insertText(editor, 'NEXT')
+  assert.equal(textMarkAttrs(editor, 'NEXT', 'highlight').color, back)
+  assert.equal(textHasMark(editor, 'NEXT', 'bold'), true)
+  editor.destroy()
+})
+
+test('empty task item paragraphs restore their persisted typing marks', () => {
+  const { editor } = createEditorWithToolbar()
+  const back = BACK_COLORS[0][1]
+  editor.commands.setContent({ type: 'doc', content: [{
+    type: 'taskList',
+    content: [
+      { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'first' }] }] },
+      { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph' }] },
+    ],
+  }] })
+  let emptyItemPos = null
+  editor.state.doc.descendants((node, pos) => {
+    if (emptyItemPos !== null) return false
+    if (node.type.name === 'taskItem' && node.textContent === '') emptyItemPos = pos
+    return true
+  })
+  assert.ok(emptyItemPos !== null)
+  editor.commands.setTextSelection(emptyItemPos + 2)
+  editor.commands.setHighlight({ color: back })
+  editor.commands.setTextSelection(findTextRange(editor, 'first').to)
+  editor.commands.setTextSelection(emptyItemPos + 2)
+  insertText(editor, 'TASK')
+  assert.equal(textMarkAttrs(editor, 'TASK', 'highlight').color, back)
+  editor.destroy()
+})
+
+test('empty paragraphs created inside styled input keep their own typing marks', () => {
+  const { editor, host } = createEditorWithToolbar()
+  editor.commands.setContent({ type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'plain' }] },
+    { type: 'paragraph' },
+    { type: 'paragraph' },
+  ] })
+  const back = BACK_COLORS[0][1]
+  editor.commands.setTextSelection(paragraphStartAt(editor, 1))
+  host.querySelector(`[data-panel="backColor"] button[data-color="${back}"]`).click()
+  insertText(editor, 'COLOR1')
+  editor.commands.splitBlock()
+  editor.commands.splitBlock()
+  insertText(editor, 'COLOR2')
+
+  const json = editor.getJSON()
+  assert.ok(json.content[2].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'), 'first colored gap must persist')
+  assert.ok(json.content[3].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'), 'second colored gap must persist')
+
+  editor.commands.setTextSelection(findTextRange(editor, 'plain').to)
+  insertText(editor, 'PLAINADD')
+  assert.equal(textHasMark(editor, 'PLAINADD', 'highlight'), false)
+  editor.commands.setTextSelection(paragraphStartAt(editor, 2))
+  insertText(editor, 'GAP')
+  assert.equal(textMarkAttrs(editor, 'GAP', 'highlight').color, back)
+  editor.destroy()
+})
+
+test('empty paragraph typing marks survive JSON and HTML reloads', () => {
+  const first = createEditorWithToolbar()
+  const back = BACK_COLORS[0][1]
+  first.editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] })
+  first.editor.commands.setTextSelection(1)
+  first.host.querySelector(`[data-panel="backColor"] button[data-color="${back}"]`).click()
+  const json = first.editor.getJSON()
+  const html = first.editor.getHTML()
+  assert.match(html, /data-dvn-typing-marks=/)
+  first.editor.destroy()
+
+  for (const content of [json, html]) {
+    const kind = typeof content === 'string' ? 'HTML' : 'JSON'
+    const loaded = createEditorWithToolbar()
+    loaded.editor.commands.setContent(content)
+    loaded.editor.commands.setTextSelection(1)
+    insertText(loaded.editor, 'RELOADED')
+    assert.equal(
+      textMarkAttrs(loaded.editor, 'RELOADED', 'highlight').color,
+      back,
+      `${kind} reload lost typing marks: ${JSON.stringify(loaded.editor.getJSON())}`,
+    )
+    loaded.editor.destroy()
+  }
+})
+
+test('explicitly clearing a mark on an empty paragraph persists the cleared state', () => {
+  const { editor } = createEditorWithToolbar()
+  const back = BACK_COLORS[0][1]
+  editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] })
+  editor.commands.setTextSelection(1)
+  editor.commands.setHighlight({ color: back })
+  assert.ok(editor.getJSON().content[0].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'))
+  editor.commands.unsetHighlight()
+  assert.equal(editor.getJSON().content[0].attrs?.dvnTypingMarks ?? null, null)
+  insertText(editor, 'CLEARED')
+  assert.equal(textHasMark(editor, 'CLEARED', 'highlight'), false)
+  editor.destroy()
+})
+
+test('empty paragraph typing marks participate in undo and redo', () => {
+  const { editor, host } = createEditorWithToolbar()
+  const back = BACK_COLORS[0][1]
+  editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] })
+  editor.commands.setTextSelection(1)
+  host.querySelector(`[data-panel="backColor"] button[data-color="${back}"]`).click()
+  assert.ok(editor.getJSON().content[0].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'))
+  assert.equal(editor.commands.undo(), true)
+  assert.equal(editor.getJSON().content[0].attrs?.dvnTypingMarks ?? null, null)
+  assert.equal(editor.commands.redo(), true)
+  assert.ok(editor.getJSON().content[0].attrs?.dvnTypingMarks?.some((mark) => mark.type === 'highlight'))
   editor.destroy()
 })
 

@@ -246,7 +246,7 @@ for (const type of ['bulletList', 'orderedList', 'taskList']) {
   })
 }
 
-test('待办 Shift+Tab -> Tab 往返后 checked 状态完整恢复', () => {
+test('待办 Shift+Tab -> Tab 往返后保留反缩进重算的 checked 状态', () => {
   const window = setupDom()
   const editor = createEditor(window, {
     type: 'doc',
@@ -268,6 +268,12 @@ test('待办 Shift+Tab -> Tab 往返后 checked 状态完整恢复', () => {
   )
 
   pressTab(editor, window, true)
+  const checksAfterOutdent = Object.fromEntries(
+    visualLevels(editor.getJSON())
+      .filter((entry) => ['一级', '二级A', '二级B', '三级B'].includes(entry.text))
+      .map((entry) => [entry.text, entry.checked]),
+  )
+  assert.notDeepEqual(checksAfterOutdent, beforeChecks, '反缩进改变父子关系后应重算父项勾选状态')
   pressTab(editor, window, false)
 
   const afterSinkChecks = Object.fromEntries(
@@ -275,6 +281,6 @@ test('待办 Shift+Tab -> Tab 往返后 checked 状态完整恢复', () => {
       .filter((entry) => ['一级', '二级A', '二级B', '三级B'].includes(entry.text))
       .map((entry) => [entry.text, entry.checked]),
   )
-  assert.deepEqual(afterSinkChecks, beforeChecks)
+  assert.deepEqual(afterSinkChecks, checksAfterOutdent, 'Tab 恢复结构时不能回滚已重算的勾选状态')
   editor.destroy()
 })

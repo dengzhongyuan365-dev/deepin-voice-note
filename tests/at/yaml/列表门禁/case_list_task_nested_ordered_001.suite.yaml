@@ -1,0 +1,84 @@
+name: 嵌套 DSA 转有序后所有子任务视觉层级不得左移
+app: deepin-voice-note
+description: 新文档中 A→b→DSA→c/DSAD/e；DSA 局部转有序后，DSA 仅改变类型，c/DSAD/e、F/G/H/I、J 的 DOM 层级必须不变。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- ordered
+- nested
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: nested_task_to_ordered_depth_stability
+  name: 嵌套 DSA 转有序后子任务层级不漂移
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - ordered
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "attrs": {}, "content": [{"type": "taskItem",
+        "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "A"}]}, {"type": "bulletList", "attrs": {}, "content":
+        [{"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "b"}]}, {"type": "taskList", "attrs": {}, "content":
+        [{"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSA"}]}, {"type": "taskList",
+        "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text":
+        "c"}]}]}, {"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSAD"}]}]},
+        {"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "e"}]}]}]}]}]}]}]}, {"type":
+        "bulletList", "attrs": {}, "content": [{"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "F"}]}]}, {"type":
+        "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "G"}]}]}, {"type": "listItem", "content": [{"type": "paragraph",
+        "content": [{"type": "text", "text": "H"}]}]}, {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "I"}]}]}]}]},
+        {"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "J"}]}]}]}]});true'
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__beforeOrderedConvert=__dvnJourney.rows();true
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='DSA')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DSA missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const b=window.__beforeOrderedConvert,a=__dvnJourney.rows();if(a.length!==b.length)throw new Error(JSON.stringify({message:'row count',b,a}));for(let
+        i=0;i<a.length;i++){if(a[i].text!==b[i].text)throw new Error(JSON.stringify({message:'text order',i,b:b[i],a:a[i]}));if(a[i].text==='DSA'){if(a[i].type!=='ordered')throw
+        new Error(JSON.stringify({message:'DSA type',i,b:b[i],a:a[i]}));}else if(JSON.stringify(a[i])!==JSON.stringify(b[i]))throw new Error(JSON.stringify({message:'unrelated
+        drift',i,b:b[i],a:a[i]}));}return a})()
+    wait_after: 250

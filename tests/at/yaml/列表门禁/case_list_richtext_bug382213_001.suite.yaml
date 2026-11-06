@@ -1,0 +1,232 @@
+name: BUG-382213 空段落输入格式持久化真实键鼠门禁
+app: deepin-voice-note
+description: 真实键鼠复现：普通行后输入格式化多行，连续回车形成空行，点击中间空行输入时字体、字号、粗体、下划线、文字色和背景色均保持；回到普通行仍为默认格式。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- richtext
+- format
+- bug-382213
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: richtext_bug382213_empty_block_marks
+  name: 格式化文本后的中间空行恢复完整输入格式
+  tags:
+  - gate
+  - real-input
+  - richtext
+  - format
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: keyboard_type
+    text: PLAIN
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: FORMAT
+    wait_after: 300
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__family=document.querySelector('select[data-control=fontFamily]').options[1].value;window.__color=document.querySelector('[data-panel=foreColor]
+        button:nth-child(4)').dataset.color;window.__back=document.querySelector('[data-panel=backColor] button:nth-child(2)').dataset.color;true
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .tiptap-select-wrap[data-control=fontFamily] .tiptap-select-button
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .tiptap-select-menu[data-control=fontFamily] button:nth-child(2)
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .tiptap-select-wrap[data-control=fontSize] .tiptap-select-button
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .tiptap-select-menu[data-control=fontSize] button[data-value="18"]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bold]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=underline]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=foreColor]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=foreColor] button:nth-child(4)'
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(2)'
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-format-cross-check.js
+    wait_after: 240
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('formatted source line',1,'FORMAT',{fontFamily:__family,fontSize:'18px',bold:true,underline:true,color:__color,highlight:__back})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror p:nth-child(2)
+      button: left
+      event: click
+    wait_after: 380
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror p:nth-child(3)
+      button: left
+      event: click
+    wait_after: 380
+  - action: keyboard_type
+    text: MIDDLE
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('middle blank paragraph restores complete formatting',2,'MIDDLE',{fontFamily:__family,fontSize:'18px',bold:true,underline:true,color:__color,highlight:__back})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror p:nth-child(4)
+      button: left
+      event: click
+    wait_after: 380
+  - action: keyboard_type
+    text: GAP
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('second middle blank paragraph restores complete formatting',3,'GAP',{fontFamily:__family,fontSize:'18px',bold:true,underline:true,color:__color,highlight:__back})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror p:nth-child(1)
+      button: left
+      event: click
+    wait_after: 380
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_type
+    text: PLAINADD
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('plain source line stays plain',0,'PLAINPLAINADD',{fontFamily:false,fontSize:false,bold:false,underline:false,color:false,highlight:false})
+    wait_after: 250

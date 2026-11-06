@@ -106,6 +106,35 @@ function currentItemText(editor) {
   return null
 }
 
+function withoutTaskChecked(value) {
+  if (Array.isArray(value)) return value.map(withoutTaskChecked)
+  if (!value || typeof value !== 'object') return value
+  const result = {}
+  for (const [key, child] of Object.entries(value)) {
+    if (key === 'attrs' && value.type === 'taskItem') {
+      const { checked: _checked, ...attrs } = child
+      result[key] = withoutTaskChecked(attrs)
+      continue
+    }
+    result[key] = withoutTaskChecked(child)
+  }
+  return result
+}
+
+function taskCheckedStates(value, states = []) {
+  if (Array.isArray(value)) {
+    for (const child of value) taskCheckedStates(child, states)
+    return states
+  }
+  if (!value || typeof value !== 'object') return states
+  if (value.type === 'taskItem') {
+    const text = value.content?.[0]?.content?.map((node) => node.text || '').join('') || ''
+    states.push([text, Boolean(value.attrs?.checked)])
+  }
+  if (value.content) taskCheckedStates(value.content, states)
+  return states
+}
+
 function assertRoundTrip(fixture, target, offset, rounds = 1) {
   const window = setupDom()
   const editor = createEditor(window, fixture.content)
@@ -120,15 +149,21 @@ function assertRoundTrip(fixture, target, offset, rounds = 1) {
       true,
       `[${fixture.name}/${target}/${offset}] 第 ${round} 轮 Shift+Tab 未处理`,
     )
+    const checksAfterOutdent = taskCheckedStates(editor.getJSON())
     assert.equal(
       pressTab(editor, window, false),
       true,
       `[${fixture.name}/${target}/${offset}] 第 ${round} 轮 Tab 未处理`,
     )
     assert.deepEqual(
-      editor.getJSON(),
-      before,
+      withoutTaskChecked(editor.getJSON()),
+      withoutTaskChecked(before),
       `[${fixture.name}/${target}/${offset}] 第 ${round} 轮往返后完整结构未恢复`,
+    )
+    assert.deepEqual(
+      taskCheckedStates(editor.getJSON()),
+      checksAfterOutdent,
+      `[${fixture.name}/${target}/${offset}] 第 ${round} 轮 Tab 不能回滚反缩进后的勾选状态`,
     )
     assert.equal(
       currentItemText(editor),

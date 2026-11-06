@@ -1,0 +1,1274 @@
+name: Tab 选区语义门禁
+app: deepin-voice-note
+description: 验证列表、普通文字及混合选区按 Tab 时按块缩进且不丢正文
+module: 列表门禁
+tags:
+- gate
+- tab
+- selection
+- regression
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: tab_all_list_selection_preserves_and_indents
+  name: 列表整体选区按 Tab：每个选中项各升一级
+  tags:
+  - gate
+  - tab
+  - selection
+  - list
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul > li:nth-child(1) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      const active=document.activeElement;\n\
+        \      if(!active || !active.classList.contains('ProseMirror')) throw new\
+        \ Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('AB')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B']);\n  \
+        \   __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList'});\n     __dvnVisual.assertLevels({A:2,B:2});\n\
+        \     const text=document.querySelector('.ProseMirror').innerText;\n     if(text.includes('\\\
+        u00a0')) throw new Error('list selection must not be replaced by NBSP');\n\
+        \     if(window.__dvnTiptapEditor.state.selection.empty) throw new Error('selection\
+        \ should remain after Tab');\n     return true;\n   })()"
+    wait_after: 250
+- id: tab_partial_text_inside_list_item_indents_item
+  name: 非首列表项内部分文字选区按 Tab：该项缩进且文字不丢失
+  tags:
+  - gate
+  - tab
+  - selection
+  - list
+  - partial-text
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul > li:nth-child(2) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('B')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \      __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList'});\n\
+        \      __dvnVisual.assertLevels({A:1,B:2,C:1});\n      const text=document.querySelector('.ProseMirror').innerText;\n\
+        \      if(text.includes('\\u00a0')) throw new Error('partial list text must\
+        \ not be replaced by NBSP');\n      return true;\n    })()"
+    wait_after: 250
+- id: tab_plain_text_selection_indents_without_loss
+  name: 普通文字选区按 Tab：保留文字并产生文本缩进
+  tags:
+  - gate
+  - tab
+  - selection
+  - plain
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: ABC
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     const ed=window.__dvnTiptapEditor;\n     const active=document.activeElement;\n\
+        \     if(!active || !active.classList.contains('ProseMirror')) throw new Error('editor\
+        \ must own focus before Tab');\n     if(!ed || ed.state.selection.empty) throw\
+        \ new Error('plain text selection must be non-empty');\n     const p=document.querySelector('.ProseMirror\
+        \ > p');\n     const walker=document.createTreeWalker(p,NodeFilter.SHOW_TEXT);\n\
+        \     const node=Array.from({length:20},()=>walker.nextNode()).find(n=>n &&\
+        \ n.textContent.includes('ABC'));\n     if(!node) throw new Error('ABC text\
+        \ node missing before Tab');\n     const range=document.createRange(); range.selectNodeContents(node);\n\
+        \     globalThis.__atPlainTextLeft=range.getBoundingClientRect().left;\n \
+        \    return true;\n   })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n  const root=document.querySelector('.ProseMirror');\n  const\
+        \ p=root.querySelector('p');\n  const normalized=(p?.textContent||'').replace(/\\\
+        u00a0/g,'');\n  if(normalized!=='ABC') throw new Error('plain text content\
+        \ lost: '+JSON.stringify(p?.textContent));\n  const walker=document.createTreeWalker(p,NodeFilter.SHOW_TEXT);\n\
+        \  const node=Array.from({length:20},()=>walker.nextNode()).find(n=>n && n.textContent.includes('ABC'));\n\
+        \  if(!node) throw new Error('ABC text node missing after Tab');\n  const\
+        \ index=node.textContent.indexOf('ABC');\n  const range=document.createRange();\n\
+        \  range.setStart(node,index); range.setEnd(node,index+3);\n  const left=range.getBoundingClientRect().left;\n\
+        \  if(!(left>globalThis.__atPlainTextLeft+1)) throw new Error('plain text\
+        \ was not visually indented: '+globalThis.__atPlainTextLeft+' -> '+left);\n\
+        \  return true;\n})()"
+    wait_after: 250
+- id: tab_mixed_plain_and_list_selection_indents_per_block
+  name: 普通段落与列表混合选区按 Tab：按块缩进且不丢正文
+  tags:
+  - gate
+  - tab
+  - selection
+  - mixed
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: P
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > p:nth-child(2)
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 600
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      const active=document.activeElement;\n\
+        \      if(!active || !active.classList.contains('ProseMirror')) throw new\
+        \ Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('PAB')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n  const root=document.querySelector('.ProseMirror');\n  const\
+        \ actual=Array.from(root.querySelectorAll('p')).map(p=>p.textContent.replace(/\\\
+        u00a0/g,'')).filter(Boolean);\n  if(JSON.stringify(actual)!==JSON.stringify(['P','A','B']))\
+        \ throw new Error('document text order mismatch: '+JSON.stringify(actual));\n\
+        \  const plain=Array.from(root.querySelectorAll('p')).find(p=>p.textContent.replace(/\\\
+        u00a0/g,'')==='P');\n  if(!plain) throw new Error('P missing');\n  if(plain.closest('li'))\
+        \ throw new Error('P must remain a plain paragraph');\n  __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList'});\n\
+        \  __dvnVisual.assertLevels({A:2,B:2});\n  return true;\n})()"
+    wait_after: 250
+- id: tab_first_level_multi_selection_skips_first_item
+  name: 一级 A/B/C 多选按 Tab：A/B/C 都成为游离二级项
+  tags:
+  - gate
+  - tab
+  - selection
+  - list
+  - first-item
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul > li:nth-child(1) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('ABC')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList'});\n\
+        \     __dvnVisual.assertLevels({A:2,B:2,C:2});\n     const text=document.querySelector('.ProseMirror').innerText;\n\
+        \     if(text.includes('\\u00a0')) throw new Error('list selection must not\
+        \ be replaced by NBSP');\n     if(window.__dvnTiptapEditor.state.selection.empty)\
+        \ throw new Error('selection should remain after Tab');\n     return true;\n\
+        \   })()"
+    wait_after: 250
+- id: tab_first_level_first_item_alone_stays_level_one
+  name: 一级 A/B/C 光标在 A 按 Tab：A 成为游离二级项
+  tags:
+  - gate
+  - tab
+  - list
+  - first-item
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul > li:nth-child(1) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList'});\n\
+        \     __dvnVisual.assertLevels({A:2,B:1,C:1});\n     const text=document.querySelector('.ProseMirror').innerText;\n\
+        \     if(text.includes('\\u00a0')) throw new Error('first item Tab must not\
+        \ replace text with NBSP');\n     return true;\n   })()"
+    wait_after: 250
+- id: tab_partial_mixed_list_selection_indents_each_selected_item
+  name: 局部混合列表多选后 Tab：每个选中项都缩进一级
+  tags:
+  - gate
+  - tab
+  - selection
+  - mixed
+  - partial-selection
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ol > li:nth-child(2) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 600
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=foreColor]
+      button: left
+      event: click
+    wait_after: 500
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=foreColor] button:nth-child(4)'
+      button: left
+      event: click
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n   const ed=window.__dvnTiptapEditor;\n   if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n   if(!ed || ed.state.selection.empty)\
+        \ throw new Error('mixed list selection must be non-empty');\n   return true;\n\
+        \ })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n   __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E']);\n\
+        \   __dvnVisual.assertListTypes({A:'orderedList',B:'bulletList',C:'bulletList',D:'bulletList',E:'orderedList'});\n\
+        \   __dvnVisual.assertLevels({A:1,B:2,C:2,D:2,E:1});\n   const selectedColor=document.querySelector('[data-panel=foreColor] button:nth-child(4)').dataset.color;\n   __dvnVisual.assertColors({B:selectedColor,C:selectedColor,D:selectedColor});\n   const root=document.querySelector('.ProseMirror');\n\
+        \   if(root.innerText.includes('\\u00a0')) throw new Error('list selection\
+        \ must not be replaced by NBSP');\n   if(window.__dvnTiptapEditor.state.selection.empty)\
+        \ throw new Error('selection should remain after Tab');\n   return true;\n\
+        \ })()"
+    wait_after: 250
+- id: tab_all_task_list_selection_preserves_and_indents
+  name: 待办列表整体选区按 Tab：每个选中项各升一级
+  tags:
+  - gate
+  - tab
+  - selection
+  - taskList
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul[data-type=taskList] > li:nth-child(1) > div > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('ABC')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'taskList',B:'taskList',C:'taskList'});\n\
+        \     __dvnVisual.assertLevels({A:2,B:2,C:2});\n     __dvnVisual.assertChecked({A:false,B:false,C:false});\n\
+        \     const text=document.querySelector('.ProseMirror').innerText;\n     if(text.includes('\\\
+        u00a0')) throw new Error('task selection must not be replaced by NBSP');\n\
+        \     if(window.__dvnTiptapEditor.state.selection.empty) throw new Error('selection\
+        \ should remain after Tab');\n     return true;\n   })()"
+    wait_after: 250
+- id: tab_partial_text_inside_task_item_indents_item
+  name: 非首待办项内部分文字选区按 Tab：该项缩进且文字不丢失
+  tags:
+  - gate
+  - tab
+  - selection
+  - taskList
+  - partial-text
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul[data-type=taskList] > li:nth-child(2) > div > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('B')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'taskList',B:'taskList',C:'taskList'});\n\
+        \     __dvnVisual.assertLevels({A:1,B:2,C:1});\n     __dvnVisual.assertChecked({A:false,B:false,C:false});\n\
+        \     const text=document.querySelector('.ProseMirror').innerText;\n     if(text.includes('\\\
+        u00a0')) throw new Error('partial task text must not be replaced by NBSP');\n\
+        \     return true;\n   })()"
+    wait_after: 250
+- id: tab_mixed_plain_and_task_list_selection_indents_per_block
+  name: 普通段落与待办列表混合选区按 Tab：按块缩进且不丢正文
+  tags:
+  - gate
+  - tab
+  - selection
+  - taskList
+  - mixed
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: P
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > p:nth-child(2)
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 500
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 600
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('PAB')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n   const root=document.querySelector('.ProseMirror');\n \
+        \  const actual=Array.from(root.querySelectorAll('p')).map(p=>p.textContent.replace(/\\\
+        u00a0/g,'')).filter(Boolean);\n   if(JSON.stringify(actual)!==JSON.stringify(['P','A','B']))\
+        \ throw new Error('document text order mismatch: '+JSON.stringify(actual));\n\
+        \   const plain=Array.from(root.querySelectorAll('p')).find(p=>p.textContent.replace(/\\\
+        u00a0/g,'')==='P');\n   if(!plain || plain.closest('li')) throw new Error('P\
+        \ must remain a plain paragraph');\n   __dvnVisual.assertListTypes({A:'taskList',B:'taskList'});\n\
+        \   __dvnVisual.assertLevels({A:2,B:2});\n   __dvnVisual.assertChecked({A:false,B:false});\n\
+        \   return true;\n })()"
+    wait_after: 250
+- id: tab_first_level_task_multi_selection_skips_first_item
+  name: 一级待办 A/B/C 多选按 Tab：A/B/C 都成为游离二级项
+  tags:
+  - gate
+  - tab
+  - selection
+  - taskList
+  - first-item
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul[data-type=taskList] > li:nth-child(1) > div > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('ABC')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'taskList',B:'taskList',C:'taskList'});\n\
+        \     __dvnVisual.assertLevels({A:2,B:2,C:2});\n     __dvnVisual.assertChecked({A:false,B:false,C:false});\n\
+        \     return true;\n   })()"
+    wait_after: 250
+- id: tab_first_level_task_first_item_alone_stays_level_one
+  name: 一级待办 A/B/C 光标在 A 按 Tab：A 成为游离二级项
+  tags:
+  - gate
+  - tab
+  - taskList
+  - first-item
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ul[data-type=taskList] > li:nth-child(1) > div > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n     __dvnVisual.assertDocumentTextOrder(['A','B','C']);\n\
+        \     __dvnVisual.assertListTypes({A:'taskList',B:'taskList',C:'taskList'});\n\
+        \     __dvnVisual.assertLevels({A:2,B:1,C:1});\n     __dvnVisual.assertChecked({A:false,B:false,C:false});\n\
+        \     return true;\n   })()"
+    wait_after: 250
+- id: tab_partial_mixed_task_selection_indents_each_selected_item
+  name: 局部有序列表转待办后多选 Tab：每个选中项都缩进一级
+  tags:
+  - gate
+  - tab
+  - selection
+  - taskList
+  - partial-selection
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 600
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 500
+  - action: keyboard_press
+    key: backspace
+    wait_after: 450
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 450
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 450
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ol > li:nth-child(2) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 500
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 600
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n      const ed=window.__dvnTiptapEditor;\n      if(!document.activeElement?.classList.contains('ProseMirror'))\
+        \ throw new Error('editor must own focus before Tab');\n      if(!ed || ed.state.selection.empty)\
+        \ throw new Error('selection must be non-empty before Tab');\n      const\
+        \ selected=ed.state.doc.textBetween(ed.state.selection.from,ed.state.selection.to,'\\\
+        n').replace(/[\\s\\u00a0]+/g,'');\n      if(selected.indexOf('BCD')<0) throw\
+        \ new Error('unexpected selection: '+JSON.stringify(selected));\n      return\
+        \ true;\n    })()"
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: "(() => {\n   __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E']);\n\
+        \   __dvnVisual.assertListTypes({A:'orderedList',B:'taskList',C:'taskList',D:'taskList',E:'orderedList'});\n\
+        \   __dvnVisual.assertLevels({A:1,B:2,C:2,D:2,E:1});\n   __dvnVisual.assertChecked({B:false,C:false,D:false});\n\
+        \   const root=document.querySelector('.ProseMirror');\n   if(root.innerText.includes('\\\
+        u00a0')) throw new Error('task selection must not be replaced by NBSP');\n\
+        \   return true;\n })()"
+    wait_after: 250

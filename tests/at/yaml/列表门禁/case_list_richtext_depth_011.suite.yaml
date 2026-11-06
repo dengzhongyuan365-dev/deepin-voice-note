@@ -1,0 +1,914 @@
+name: 同一待办行内两段相反文字格式：边界插字、跨分支返回、转有序历史链
+app: deepin-voice-note
+description: 在17行三级混合列表中将同名另一分支Q变Qtail，Qt设粗体背景、ail设斜体前景，光标移动到格式界面插入Z按左侧格式判定，再转有序并多步UndoRedo；每一步同时检查行内实际DOM与父任务编号。
+module: 列表门禁
+tags:
+- gate
+- discovery
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: richtext_depth_011
+  name: 同一待办行内两段相反文字格式：边界插字、跨分支返回、转有序历史链
+  tags:
+  - gate
+  - real-input
+  - richtext
+  - mixed
+  - task
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: keyboard_type
+    text: ROOT
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: XA
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: P
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: O
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: U
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: A
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: Q
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: V
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: T
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: TAIL
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: W
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: Y
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: N
+    wait_after: 250
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: END
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 200
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("initial_enter_created_14_tasks", [["ROOT", "task", 1, false, null], ["XA", "task", 1, false, null], ["P", "task",
+        1, false, null], ["O", "task", 1, false, null], ["U", "task", 1, false, null], ["A", "task", 1, false, null], ["Q", "task", 1, false, null],
+        ["V", "task", 1, false, null], ["T", "task", 1, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 1, false, null], ["Y", "task",
+        1, false, null], ["N", "task", 1, false, null], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 1
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 3
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 4
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 5
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 6
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 7
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 8
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 10
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 11
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 12
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("three_level_two_branch_tree", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task",
+        3, false, null], ["O", "task", 3, false, null], ["U", "task", 3, false, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null],
+        ["V", "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task",
+        3, false, null], ["N", "task", 2, false, null], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 3
+      journey_kind: text
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_conversion_3", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task", 3, false,
+        null], ["O", "ordered", 3, null, 1], ["U", "task", 3, false, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null], ["V", "task",
+        2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null],
+        ["N", "task", 2, false, null], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 4
+      journey_kind: text
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_conversion_4", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task", 3, false,
+        null], ["O", "ordered", 3, null, 1], ["U", "bullet", 3, null, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null], ["V", "task",
+        2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null],
+        ["N", "task", 2, false, null], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 12
+      journey_kind: text
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_conversion_12", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task", 3, false,
+        null], ["O", "ordered", 3, null, 1], ["U", "bullet", 3, null, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null], ["V", "task",
+        2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null],
+        ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("third_to_second_keeps_neighbors", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task",
+        2, false, null], ["O", "ordered", 3, null, 1], ["U", "bullet", 3, null, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null],
+        ["V", "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task",
+        3, false, null], ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("second_to_third_again", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task", 3,
+        false, null], ["O", "ordered", 3, null, 1], ["U", "bullet", 3, null, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null], ["V",
+        "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false,
+        null], ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 2
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: P2
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("enter_inserts_third_level_task", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null], ["P", "task",
+        3, false, null], ["P2", "task", 3, false, null], ["O", "ordered", 3, null, 1], ["U", "bullet", 3, null, null], ["A", "task", 2, false, null],
+        ["Q", "task", 3, false, null], ["V", "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task",
+        2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 4
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: O2
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("enter_inserts_third_level_ordered_item", [["ROOT", "task", 1, false, null], ["XA", "task", 2, false, null],
+        ["P", "task", 3, false, null], ["P2", "task", 3, false, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null, 2], ["U", "bullet",
+        3, null, null], ["A", "task", 2, false, null], ["Q", "task", 3, false, null], ["V", "task", 2, false, null], ["T", "task", 3, false, null],
+        ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END", "task",
+        1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      journey_index: 1
+      journey_kind: checkbox
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("check_branch_1", [["ROOT", "task", 1, false, null], ["XA", "task", 2, true, null], ["P", "task", 3, true, null],
+        ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null, 2], ["U", "bullet", 3, null, null], ["A", "task", 2,
+        false, null], ["Q", "task", 3, false, null], ["V", "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null],
+        ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      journey_index: 7
+      journey_kind: checkbox
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("check_branch_7", [["ROOT", "task", 1, false, null], ["XA", "task", 2, true, null], ["P", "task", 3, true, null],
+        ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null, 2], ["U", "bullet", 3, null, null], ["A", "task", 2,
+        true, null], ["Q", "task", 3, true, null], ["V", "task", 2, false, null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null],
+        ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      button: left
+      event: click
+      offset_x: 4
+      journey_index: 1
+      journey_kind: text
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_press
+    key: right
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("bugfix_split_parent_and_children_checked", [["ROOT", "task", 1, false, null], ["X", "task", 2, true, null],
+        ["A", "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered",
+        3, null, 2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["Q", "task", 3, true, null], ["V", "task", 2, false, null], ["T",
+        "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2,
+        null, 1], ["END", "task", 1, false, null]])
+    wait_after: 180
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-format-cross-check.js
+    wait_after: 200
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 9
+      journey_kind: text
+      offset_x: 3
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 320
+  - action: keyboard_type
+    text: tail
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("create_new_mixed_format_target_Qtail",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null], ["A",
+        "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null,
+        2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["Qtail", "task", 3, true, null], ["V", "task", 2, false, null], ["T", "task",
+        3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null,
+        1], ["END", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 9
+      journey_kind: text
+      offset_x: 3
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+right
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+right
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{let e=__dvnTiptapEditor,s=e.state.selection;if(e.state.doc.textBetween(s.from,s.to)!=='Qt'||window.getSelection().toString()!=='Qt')throw
+        Error('bad Qt selection');return true})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=bold]
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__leftBack=document.querySelector('[data-panel=backColor] button:nth-child(2)').dataset.color; true
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-color-menu=backColor]
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: '[data-panel=backColor] button:nth-child(2)'
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("left_Qt_bold_and_background",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null], ["A", "task",
+        2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null, 2], ["U",
+        "bullet", 3, null, null], ["A", "task", 2, true, null], ["Qtail", "task", 3, true, null], ["V", "task", 2, false, null], ["T", "task", 3, false,
+        null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END",
+        "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('Qt not ail bold',9,'Qtail',0,2,{bold:true,highlight:__leftBack})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 9
+      journey_kind: text
+      offset_x: 3
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_press
+    key: right
+    wait_after: 320
+  - action: keyboard_press
+    key: right
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{let e=__dvnTiptapEditor,s=e.state.selection;if(e.state.doc.textBetween(s.from,s.to)!=='ail'||window.getSelection().toString()!=='ail')throw
+        Error('bad ail selection');return true})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=italic]
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__rightFore=document.querySelector('[data-panel=foreColor] button:nth-child(4)').dataset.color; true
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-color-menu=foreColor]
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: '[data-panel=foreColor] button:nth-child(4)'
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("right_ail_italic_and_foreground",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null], ["A", "task",
+        2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null, 2], ["U",
+        "bullet", 3, null, null], ["A", "task", 2, true, null], ["Qtail", "task", 3, true, null], ["V", "task", 2, false, null], ["T", "task", 3, false,
+        null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null, 1], ["END",
+        "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('left only bold/highlight',9,'Qtail',0,2,{bold:true,highlight:__leftBack});__dvnFormatCross.assertPartial('right
+        only italic/foreground',9,'Qtail',2,5,{italic:true,color:__rightFore})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 9
+      journey_kind: text
+      offset_x: 3
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_press
+    key: right
+    wait_after: 320
+  - action: keyboard_press
+    key: right
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{let e=__dvnTiptapEditor;if(e.state.selection.$from.parentOffset!==2)throw Error('not at Qt|ail boundary');return true})()
+    wait_after: 250
+  - action: keyboard_type
+    text: Z
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("type_at_inline_mark_boundary_no_list_mutation",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null],
+        ["A", "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered",
+        3, null, 2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["QtZail", "task", 3, true, null], ["V", "task", 2, false, null],
+        ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered",
+        2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('insert follows left bold',9,'QtZail',0,3,{bold:true,highlight:__leftBack});__dvnFormatCross.assertPartial('old
+        suffix italic',9,'QtZail',3,6,{italic:true,color:__rightFore})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 9
+      journey_kind: text
+      offset_x: 3
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=orderedList]
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("switch_differently_formatted_Q_to_ordered_preserves_marks",[["ROOT", "task", 1, false, null], ["X", "task",
+        2, true, null], ["A", "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2",
+        "ordered", 3, null, 2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["QtZail", "ordered", 3, null, 1], ["V", "task", 2, false,
+        null], ["T", "task", 3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N",
+        "ordered", 2, null, 1], ["END", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('order left still marked',9,'QtZail',0,3,{bold:true,highlight:__leftBack});__dvnFormatCross.assertPartial('order
+        right still marked',9,'QtZail',3,6,{italic:true,color:__rightFore})
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("undo_Q_to_ordered_restores_checked_task",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null], ["A",
+        "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null,
+        2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["QtZail", "task", 3, true, null], ["V", "task", 2, false, null], ["T", "task",
+        3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null,
+        1], ["END", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("redo_Q_ordered_restore_number_and_format",[["ROOT", "task", 1, false, null], ["X", "task", 2, true, null], ["A",
+        "task", 2, true, null], ["P", "task", 3, true, null], ["P2", "task", 3, true, null], ["O", "ordered", 3, null, 1], ["O2", "ordered", 3, null,
+        2], ["U", "bullet", 3, null, null], ["A", "task", 2, true, null], ["QtZail", "ordered", 3, null, 1], ["V", "task", 2, false, null], ["T", "task",
+        3, false, null], ["TAIL", "task", 1, false, null], ["W", "task", 2, false, null], ["Y", "task", 3, false, null], ["N", "ordered", 2, null,
+        1], ["END", "task", 1, false, null]])
+    wait_after: 250

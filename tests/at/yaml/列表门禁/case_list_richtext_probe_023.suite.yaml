@@ -1,0 +1,264 @@
+name: 三级待办连续回车退出空项到二级后格式继承
+app: deepin-voice-note
+description: 从真实键鼠建文，三级已勾选待办应用加粗背景，输入P3后再回车生成空三级、再次回车降二级，输入NEXT检验格式继承。
+module: 列表门禁
+tags:
+- gate
+- discovery
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: richtext_completed_enter_descend_then_type
+  name: 三级已完成待办连续回车降二级的待输入格式
+  tags:
+  - gate
+  - real-input
+  - richtext
+  - mixed
+  - task
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 240
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-format-cross-check.js
+    wait_after: 240
+  - action: keyboard_type
+    text: ROOT
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 380
+  - action: keyboard_press
+    key: end
+    wait_after: 360
+  - action: keyboard_press
+    key: return
+    wait_after: 360
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 360
+  - action: keyboard_press
+    key: end
+    wait_after: 360
+  - action: keyboard_press
+    key: return
+    wait_after: 360
+  - action: keyboard_type
+    text: P2
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="created_three_level";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("minimal_three_level_before_check",[["ROOT", "task", 1, false, null], ["A", "task", 2, false,
+        null], ["P2", "task", 3, false, null]])
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 2
+      journey_kind: checkbox
+      button: left
+      event: click
+      offset_x: 3
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_check_P2";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 2
+      journey_kind: text
+      button: left
+      event: click
+      offset_x: 3
+    wait_after: 380
+  - action: keyboard_press
+    key: home
+    wait_after: 360
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bold]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minBack=document.querySelector('[data-panel=backColor] button:nth-child(2)').dataset.color;true
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(2)'
+      button: left
+      event: click
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_formatting";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('P2 styled',2,'P2',{bold:true,highlight:__minBack})
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 2
+      journey_kind: text
+      button: left
+      event: click
+      offset_x: 3
+    wait_after: 380
+  - action: keyboard_press
+    key: end
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="before_enter";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_enter";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: keyboard_type
+    text: P3
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_typing";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to,dom:window.getSelection().toString()},stored:s.empty?e.state.storedMarks?.map(m=>m.type.name):null,marks:s.$from.marks().map(m=>m.type.name),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("minimal_new_task_visual",[["ROOT", "task", 1, false, null], ["A", "task", 2, false, null], ["P2",
+        "task", 3, true, null], ["P3", "task", 3, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('minimal newly typed P3 inherits active formatting',3,'P3',{bold:true,highlight:__minBack})
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_new_empty_3";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to},stored:e.state.storedMarks?.map(m=>({type:m.type.name,attrs:m.attrs})),marks:s.$from.marks().map(m=>({type:m.type.name,attrs:m.attrs})),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: keyboard_press
+    key: return
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_descend_empty_to_2";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to},stored:e.state.storedMarks?.map(m=>({type:m.type.name,attrs:m.attrs})),marks:s.$from.marks().map(m=>({type:m.type.name,attrs:m.attrs})),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: keyboard_type
+    text: NEXT
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__minStage="after_typing_next_2";(()=>{const e=__dvnTiptapEditor,s=e.state.selection;return {stage:window.__minStage,rows:__dvnJourney.rows(),selection:{from:s.from,to:s.to},stored:e.state.storedMarks?.map(m=>({type:m.type.name,attrs:m.attrs})),marks:s.$from.marks().map(m=>({type:m.type.name,attrs:m.attrs})),rendered:__dvnFormatCross.snapshot().map(x=>x.runs)}})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('descended_second_level_after_empty_enter',[["ROOT","task",1,false,null],["A","task",2,false,null],["P2","task",3,true,null],["P3","task",3,false,null],["NEXT","task",2,false,null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('NEXT style preserved after empty Enter descend to level 2',4,'NEXT',{bold:true,highlight:__minBack})
+    wait_after: 250

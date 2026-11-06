@@ -1,0 +1,1155 @@
+name: PMS 已关闭列表 Bug 回归
+app: deepin-voice-note
+description: 回归 10 个已关闭的语音记事本有序/无序/待办列表操作 Bug
+module: 列表门禁
+tags:
+- regression
+- pms
+- closed
+- list
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: pms_closed_381039_first_item_tab
+  name: BUG-381039 多级列表第一行一级项按 Tab 可降级为二级
+  tags:
+  - regression
+  - pms
+  - '381039'
+  - tab
+  - first-item
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D']); __dvnVisual.assertLevels({A:2,B:1,C:1,D:1}); __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList',D:'bulletList'}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_381009_empty_level3_enter
+  name: BUG-381009 三级行尾 Enter 后空行再 Enter 应降到二级
+  tags:
+  - regression
+  - pms
+  - '381009'
+  - enter
+  - level-three
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: X
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','X']); __dvnVisual.assertLevels({A:1,B:2,C:3,X:2}); __dvnVisual.assertNumbers({A:1,B:1,C:1,X:2}); return true; })()
+    wait_after: 250
+- id: pms_closed_379801_shift_tab_then_tab
+  name: BUG-379801 二级 Shift+Tab 后再 Tab，其他二级项保持原层级
+  tags:
+  - regression
+  - pms
+  - '379801'
+  - shift-tab
+  - tab
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('C'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,B:2,C:2}); __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList'}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379767_level3_roundtrip
+  name: BUG-379767 三级 Shift+Tab 后 Tab 仍为三级，不能出现四级
+  tags:
+  - regression
+  - pms
+  - '379767'
+  - shift-tab
+  - tab
+  - max-level
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,B:3,C:1}); if(Math.max(...__dvnVisual.snapshot().map(x=>x.visualLevel))>3) throw new Error('list exceeded level 3'); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379771_backspace_exit
+  name: BUG-379771 三级无序项连续 Backspace 应逐级退出为普通文本
+  tags:
+  - regression
+  - pms
+  - '379771'
+  - backspace
+  - bullet
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_press
+    key: backspace
+    wait_after: 500
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_press
+    key: backspace
+    wait_after: 500
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_press
+    key: backspace
+    wait_after: 500
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertPlainParagraph('B'); __dvnVisual.assertDocumentTextOrder(['A','B','C']); __dvnVisual.assertLevels({A:1,C:1}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379765_level1_exit
+  name: BUG-379765 一级有序项 Shift+Tab 应退出为普通文本
+  tags:
+  - regression
+  - pms
+  - '379765'
+  - shift-tab
+  - ordered
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { const root=document.querySelector('.ProseMirror'); const a=Array.from(root.querySelectorAll('p')).find(p=>p.textContent==='A'); if(!a || a.closest('li')) throw new Error('A must become plain text'); __dvnVisual.assertDocumentTextOrder(['A','B','C']); __dvnVisual.assertLevels({B:1,C:1}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379759_level2_backspace
+  name: BUG-379759 二级有序项行首 Backspace 应回到一级且文字不重叠
+  tags:
+  - regression
+  - pms
+  - '379759'
+  - backspace
+  - ordered
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_press
+    key: backspace
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C']); __dvnVisual.assertLevels({A:1,B:1,C:1}); __dvnVisual.assertNumbers({A:1,B:2,C:3}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379715_selection_switch
+  name: BUG-379715 多行文本反复切换有序/无序/待办，选区必须保持
+  tags:
+  - regression
+  - pms
+  - '379715'
+  - selection
+  - mixed-types
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: F
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: G
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: H
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: I
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: J
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: K
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: L
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusParagraph('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertSelectionText('ABCDEFGH'); return true; })()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E','F','G','H','I','J','K','L']); __dvnVisual.assertSelectionText('ABCDEFGH'); __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',C:'orderedList',D:'orderedList',E:'orderedList',F:'orderedList',G:'orderedList',H:'orderedList'}); return true; })()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E','F','G','H','I','J','K','L']); __dvnVisual.assertSelectionText('ABCDEFGH'); __dvnVisual.assertListTypes({A:'bulletList',B:'bulletList',C:'bulletList',D:'bulletList',E:'bulletList',F:'bulletList',G:'bulletList',H:'bulletList'}); return true; })()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E','F','G','H','I','J','K','L']); __dvnVisual.assertSelectionText('ABCDEFGH'); __dvnVisual.assertListTypes({A:'taskList',B:'taskList',C:'taskList',D:'taskList',E:'taskList',F:'taskList',G:'taskList',H:'taskList'}); return true; })()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D','E','F','G','H','I','J','K','L']); __dvnVisual.assertSelectionText('ABCDEFGH'); __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',C:'orderedList',D:'orderedList',E:'orderedList',F:'orderedList',G:'orderedList',H:'orderedList'}); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379707_click_clear_selection
+  name: BUG-379707 列表转换后点击选中区域应取消文本高亮
+  tags:
+  - regression
+  - pms
+  - '379707'
+  - selection
+  - ordered
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: F
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: G
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: H
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: I
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: J
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: K
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: L
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusParagraph('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror > ol > li:nth-child(3) > p
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertSelectionEmpty(); return true; })()
+    wait_after: 250
+
+- id: pms_closed_379679_multiline_number
+  name: BUG-379679 多行文本转有序列表后序号应在各列表首行
+  tags:
+  - regression
+  - pms
+  - '379679'
+  - ordered
+  - numbering
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusParagraph('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','D']); __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',C:'orderedList',D:'orderedList'}); __dvnVisual.assertNumbers({A:1,B:2,C:3,D:4}); return true; })()
+    wait_after: 250

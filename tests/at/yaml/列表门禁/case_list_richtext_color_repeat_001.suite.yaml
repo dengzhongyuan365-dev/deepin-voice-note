@@ -1,0 +1,278 @@
+name: 文字色和背景色主按钮重复点击保持颜色门禁
+app: deepin-voice-note
+description: 真实键鼠验证：有/无选区重复点击文字色和背景色主按钮均只重应用当前颜色，不取消；切色生效，透明色显式清除背景。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- richtext
+- color
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: richtext_color_main_buttons_reapply
+  name: 文字色/背景色主按钮重复点击不取消并持续输入
+  tags:
+  - gate
+  - real-input
+  - richtext
+  - color
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: keyboard_type
+    text: SEED
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-format-cross-check.js
+    wait_after: 240
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__back=document.querySelector('[data-panel=backColor] button:nth-child(2)').dataset.color;window.__fore=document.querySelector('[data-panel=foreColor]
+        button:nth-child(4)').dataset.color;window.__back2=document.querySelector('[data-panel=backColor] button:nth-child(5)').dataset.color;true
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(2)'
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: keyboard_type
+    text: NEXT
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('collapsed cursor repeated background clicks keep background',0,'SEEDNEXT',4,8,{highlight:__back})
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=foreColor] button:nth-child(4)'
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: keyboard_type
+    text: FORE
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('collapsed cursor repeated text color clicks keep color',0,'SEEDNEXTFORE',8,12,{color:__fore})
+    wait_after: 220
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('selected text repeated background clicks keep background',0,'SEEDNEXTFORE',0,12,{highlight:__back})
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=foreColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('selected text repeated text color clicks keep color',0,'SEEDNEXTFORE',0,12,{color:__fore})
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(5)'
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('choosing different background changes selected text',0,'SEEDNEXTFORE',0,12,{highlight:__back2})
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assertPartial('main button after different color keeps it',0,'SEEDNEXTFORE',0,12,{highlight:__back2})
+    wait_after: 220
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(1)'
+      button: left
+      event: click
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('transparent explicitly clears background',0,'SEEDNEXTFORE',{highlight:false})
+    wait_after: 220

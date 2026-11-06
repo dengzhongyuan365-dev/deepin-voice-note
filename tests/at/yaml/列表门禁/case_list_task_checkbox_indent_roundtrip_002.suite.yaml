@@ -1,0 +1,114 @@
+name: 待办退出成普通文本再转回待办：已完成子项应恢复父项勾选
+app: deepin-voice-note
+description: DSAD 从二级待办 Shift+Tab 退出成普通文本，DSA/DAS 已在二级完成；重新给 DSAD 应用待办后，DSAD 应按视觉子项恢复为已勾选。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- checkbox
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: task_plain_to_task_parent_restores_checked
+  name: 普通文本重新转待办时父项按已完成子项恢复勾选
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - checkbox
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "content": [{"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSAD"}]}]}, {"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSA"}]}]}, {"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DAS"}]}]}]}]}); window.__dvnTiptapEditor.commands.setTextSelection(2);
+        true'
+    wait_after: 260
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('DSAD_exited_task_list_as_plain_text',[["DSAD","plain",0,null,null],["DSA","task",2,true,null],["DAS","task",2,true,null]])
+    wait_after: 240
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 0
+      journey_kind: text
+      offset_x: 3
+    wait_after: 360
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('DSAD_exited_task_list_as_plain_text',[["DSAD","plain",0,null,null],["DSA","task",2,true,null],["DAS","task",2,true,null]])
+    wait_after: 240
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 0
+      journey_kind: text
+      offset_x: 3
+    wait_after: 360
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=taskList]
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('DSAD_reapplied_as_task_restores_checked',[["DSAD","task",1,true,null],["DSA","task",2,true,null],["DAS","task",2,true,null]])
+    wait_after: 240

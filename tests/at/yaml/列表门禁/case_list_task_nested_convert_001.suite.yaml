@@ -1,0 +1,191 @@
+name: 嵌套父任务转无序：DSA/DAS 子项视觉层级不得整体漂移
+app: deepin-voice-note
+description: 截图同构嵌套任务树，DSA 和 DAS 分别局部转无序，逐行比较所有其他节点的 DOM 视觉层级、类型、checked 与编号。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- nested
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: nested_task_parent_convert_depth_stability
+  name: 嵌套 DSA/DAS 转无序后所有后代视觉层级不漂移
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - nested
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "content": [{"type": "taskItem", "attrs": {"checked":
+        false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "PRE"}]}, {"type": "taskList", "content": [{"type": "taskItem", "attrs":
+        {"checked": false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSA"}]}, {"type": "taskList", "content": [{"type": "taskItem",
+        "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DASD"}]}, {"type": "taskList", "content": [{"type":
+        "taskItem", "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DASDDASDAS"}]}]}]}]}, {"type": "taskItem",
+        "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DAS"}]}, {"type": "taskList", "content": [{"type":
+        "taskItem", "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DASDASDS"}]}]}, {"type": "taskItem",
+        "attrs": {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "WDSADSA"}]}]}, {"type": "taskItem", "attrs":
+        {"checked": true}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "EDSS"}]}]}]}]}, {"type": "taskItem", "attrs": {"checked":
+        false}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "R"}]}]}]}]}]}]}, {"type": "taskItem", "attrs": {"checked": true},
+        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "T"}]}]}, {"type": "taskItem", "attrs": {"checked": true}, "content": [{"type":
+        "paragraph", "content": [{"type": "text", "text": "Y"}]}]}, {"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph",
+        "content": [{"type": "text", "text": "U"}]}]}, {"type": "taskItem", "attrs": {"checked": false}, "content": [{"type": "paragraph", "content": [{"type":
+        "text", "text": "I"}]}]}]}]});true'
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__nestedBefore=__dvnJourney.rows();true
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==="DSA")pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DSA missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const before=window.__nestedBefore,after=__dvnJourney.rows();if(before.length!==after.length)throw new Error(JSON.stringify({message:'row
+        count',before,after}));for(let i=0;i<before.length;i++){const b=before[i],a=after[i];if(b.text!==a.text)throw new Error(JSON.stringify({message:'text
+        order',i,b,a}));if(b.text==="DSA"){if(a.type!=='bullet'||a.checked!==null)throw new Error(JSON.stringify({message:'target type',i,b,a}));}else if(a.level!==b.level||a.type!==b.type||a.checked!==b.checked||a.number!==b.number)throw
+        new Error(JSON.stringify({message:'unrelated drift',i,b,a}));}window.__nestedBefore=after;return after})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==="DAS")pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DAS missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      event: click
+      button: left
+    wait_after: 370
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const before=window.__nestedBefore,after=__dvnJourney.rows();if(before.length!==after.length)throw new Error(JSON.stringify({message:'row
+        count',before,after}));for(let i=0;i<before.length;i++){const b=before[i],a=after[i];if(b.text!==a.text)throw new Error(JSON.stringify({message:'text
+        order',i,b,a}));if(b.text==="DAS"){if(a.type!=='bullet'||a.checked!==null)throw new Error(JSON.stringify({message:'target type',i,b,a}));}else if(a.level!==b.level||a.type!==b.type||a.checked!==b.checked||a.number!==b.number)throw
+        new Error(JSON.stringify({message:'unrelated drift',i,b,a}));}window.__nestedBefore=after;return after})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__nestedBeforeTab=__dvnJourney.rows();true
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==="DAS")pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DAS missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const a=__dvnJourney.rows(),b=window.__nestedBeforeTab;if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(JSON.stringify({message:'三级
+        DAS Tab 必须无效果且后代不能移动',before:b,after:a}));return a})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__nestedBeforeChildTab=__dvnJourney.rows();true
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==="DASDASDS")pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DASDASDS missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const a=__dvnJourney.rows(),b=window.__nestedBeforeChildTab;if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(JSON.stringify({message:'三级子任务
+        Tab 必须无效果',before:b,after:a}));return a})()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__nestedBeforeShift=__dvnJourney.rows();true
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==="DAS")pos=p+2;return pos===null});if(pos===null)throw
+        new Error('DAS missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const a=__dvnJourney.rows(),b=window.__nestedBeforeShift;if(a.length!==b.length)throw new Error('row count');for(let i=0;i<a.length;i++){if(a[i].text!==b[i].text)throw
+        new Error('text order');if(a[i].text==='DAS'){if(a[i].level!==b[i].level-1)throw new Error(JSON.stringify({message:'DAS Shift+Tab 应只降一级',i,b:b[i],a:a[i]}));}else
+        if(a[i].level!==b[i].level||a[i].type!==b[i].type||a[i].checked!==b[i].checked||a[i].number!==b[i].number)throw new Error(JSON.stringify({message:'DAS
+        Shift+Tab 污染其他节点',i,b:b[i],a:a[i]}));}return a})()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const a=__dvnJourney.rows();const b=window.__nestedBefore;if(a.length!==b.length)throw new Error('undo row count');for(let i=0;i<a.length;i++){if(a[i].text!==b[i].text||a[i].level!==b[i].level)throw
+        new Error(JSON.stringify({message:'undo drift',i,b:b[i],a:a[i]}));}return a})()
+    wait_after: 250

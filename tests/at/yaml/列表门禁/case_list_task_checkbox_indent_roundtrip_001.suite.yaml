@@ -1,0 +1,161 @@
+name: 待办往返：A 成为未勾选父项后 Tab 回同级不得恢复勾选
+app: deepin-voice-note
+description: 真实键鼠构造 A(三级已勾选)/B(二级未勾选)，A 两次 Shift+Tab 成为 B 的父项并取消勾选，再 Tab 与 B 同级，A 必须保持未勾选；Undo/Redo 同样保持。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- indent
+- checkbox
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: task_parent_outdent_then_tab_keeps_unchecked
+  name: A 成为未勾选父项后 Tab 回同级不能重新勾选
+  tags:
+  - gate
+  - real-input
+  - task
+  - indent
+  - checkbox
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: .ProseMirror
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 320
+  - action: keyboard_press
+    key: backspace
+    wait_after: 320
+  - action: keyboard_type
+    text: A
+    wait_after: 280
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=taskList]
+    wait_after: 360
+  - action: keyboard_press
+    key: end
+    wait_after: 320
+  - action: keyboard_press
+    key: return
+    wait_after: 320
+  - action: keyboard_type
+    text: B
+    wait_after: 280
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 0
+      journey_kind: text
+      offset_x: 3
+    wait_after: 360
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 0
+      journey_kind: checkbox
+      offset_x: 3
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('before_outdent_A_checked',[["A","task",3,true,null],["B","task",2,false,null]])
+    wait_after: 240
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 0
+      journey_kind: text
+      offset_x: 3
+    wait_after: 360
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('A_becomes_parent_of_unchecked_B',[["A","task",1,false,null],["B","task",2,false,null]])
+    wait_after: 240
+  - action: keyboard_press
+    key: tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('A_tab_back_same_level_stays_unchecked',[["A","task",2,false,null],["B","task",2,false,null]])
+    wait_after: 240
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('undo_keeps_A_unchecked',[["A","task",1,false,null],["B","task",2,false,null]])
+    wait_after: 240
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint('redo_keeps_A_unchecked',[["A","task",2,false,null],["B","task",2,false,null]])
+    wait_after: 240

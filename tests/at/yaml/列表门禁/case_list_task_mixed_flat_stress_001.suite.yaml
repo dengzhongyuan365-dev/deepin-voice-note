@@ -1,0 +1,231 @@
+name: 复杂混合视觉树：任务退出/恢复/直接取消与有序序号联动门禁
+app: deepin-voice-note
+description: 16 行扁平视觉混合树，包含任务、两段有序列表、无序列表和多级后代；真实键鼠执行 Shift+Tab 退出普通文本、重新加待办、直接取消、再次恢复和 Undo/Redo，每步全文核对类型、层级、勾选和有序编号。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- ordered
+- undo
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: task_mixed_flat_exit_restore_stress
+  name: 16 行混合视觉树退出/恢复/直接取消与序号有效性
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - ordered
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "attrs": {}, "content": [{"type": "taskItem",
+        "attrs": {"checked": false, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "ROOT"}]}]}]}, {"type":
+        "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "C1"}]}]}, {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "C2"}]}]}]}, {"type": "orderedList", "attrs": {"start": 1}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel":
+        1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "O1"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content":
+        [{"type": "paragraph", "content": [{"type": "text", "text": "O2"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type":
+        "paragraph", "content": [{"type": "text", "text": "O3"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked":
+        false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "B1"}]}]}]}, {"type": "taskList", "attrs": {},
+        "content": [{"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text",
+        "text": "B1a"}]}]}, {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type":
+        "text", "text": "B1b"}]}]}]}, {"type": "orderedList", "attrs": {"start": 1}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel": 2}, "content":
+        [{"type": "paragraph", "content": [{"type": "text", "text": "P1"}]}]}, {"type": "listItem", "attrs": {"dvnIndentLevel": 2}, "content": [{"type":
+        "paragraph", "content": [{"type": "text", "text": "P2"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "B2"}]}]}]}, {"type": "bulletList", "attrs":
+        {}, "content": [{"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "U1"}]}]},
+        {"type": "listItem", "attrs": {"dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "U2"}]}]}]}, {"type":
+        "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content":
+        [{"type": "text", "text": "B3"}]}]}]}, {"type": "taskList", "attrs": {}, "content": [{"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel":
+        0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "TAIL"}]}]}]}]});true'
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_initial",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false, null],
+        ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 2, false, null], ["B1a", "task", 3,
+        true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: keyboard_press
+    key: home
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_b1_plain",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false, null],
+        ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task", 3,
+        true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_b1_restored",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_b1_direct_plain",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (()=>{const e=window.__dvnTiptapEditor;let pos=null;e.state.doc.descendants((n,p)=>{if(n.isText&&n.text==='B1')pos=p+2;return pos===null});if(pos===null)throw
+        new Error('B1 missing');e.commands.setTextSelection(pos);return pos})()
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      event: click
+      button: left
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_b1_restored_again",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2,
+        false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null], ["B1a",
+        "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null],
+        ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_undo_restore",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "plain", 0, null, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 320
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_redo_restore",[["ROOT", "task", 1, false, null], ["C1", "task", 2, true, null], ["C2", "task", 2, false,
+        null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null], ["B1a", "task",
+        3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2, true, null], ["U1",
+        "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 0
+      journey_kind: checkbox
+      event: click
+      button: left
+      offset_x: 3
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_root_cascade_before_boundary",[["ROOT", "task", 1, true, null], ["C1", "task", 2, true, null], ["C2",
+        "task", 2, true, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null],
+        ["B1a", "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2,
+        true, null], ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 0
+      journey_kind: checkbox
+      event: click
+      button: left
+      offset_x: 3
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("mixed_flat_root_cancel_before_boundary",[["ROOT", "task", 1, false, null], ["C1", "task", 2, false, null], ["C2",
+        "task", 2, false, null], ["O1", "ordered", 2, null, 1], ["O2", "ordered", 2, null, 2], ["O3", "ordered", 2, null, 3], ["B1", "task", 1, false, null],
+        ["B1a", "task", 3, true, null], ["B1b", "task", 3, false, null], ["P1", "ordered", 3, null, 1], ["P2", "ordered", 3, null, 2], ["B2", "task", 2,
+        true, null], ["U1", "bullet", 2, null, null], ["U2", "bullet", 2, null, null], ["B3", "task", 2, false, null], ["TAIL", "task", 1, false, null]])
+    wait_after: 250

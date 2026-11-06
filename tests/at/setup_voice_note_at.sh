@@ -3,6 +3,7 @@
 set -euo pipefail
 
 APP_NAME="deepin-voice-note"
+APP_BIN="${DVN_AT_APP_BIN:-${APP_NAME}}"
 
 if [[ -z "${HOME:-}" || "${HOME}" == "/" ]]; then
     echo "Invalid HOME: ${HOME:-<empty>}" >&2
@@ -76,6 +77,15 @@ if [[ ! -f "${FIXTURE_DB}" ]]; then
     exit 1
 fi
 
+# Test-only X11 keyboard state: a stale Caps Lock makes all typed fixture labels
+# lowercase and invalidates AT preconditions before product checks even begin.
+if [[ "${DISPLAY:-}" == ":0" ]] && command -v xset >/dev/null 2>&1 && command -v xdotool >/dev/null 2>&1; then
+    led_mask="$(xset q 2>/dev/null | sed -n 's/.*LED mask: *//p' | head -1)"
+    if [[ "$led_mask" =~ ^[[:xdigit:]]+$ ]] && (( (16#$led_mask & 1) != 0 )); then
+        xdotool key Caps_Lock
+    fi
+fi
+
 stop_app
 clean_qml_cache
 rm -rf -- "${DATA_DIR}" "${CONFIG_DIR}"
@@ -85,4 +95,13 @@ cp -f -- "${FIXTURE_DB}" "${DB_PATH}"
 wait_for_schema
 verify_fixture_data
 
-exec "${APP_NAME}"
+if [[ "${DVN_AT_SESSIOND:-0}" == "1" ]]; then
+    exec systemd-run --user --scope --collect \
+        --setenv=HOME="${HOME}" \
+        --setenv=QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1 \
+        --setenv=XDG_CURRENT_DESKTOP=DDE \
+        --setenv=QT_QPA_PLATFORM='dxcb;xcb' \
+        "${APP_BIN}"
+fi
+
+exec "${APP_BIN}"

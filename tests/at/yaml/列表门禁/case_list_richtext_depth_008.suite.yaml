@@ -1,0 +1,244 @@
+name: 普通段落先设置格式→回车→转换待办→二三级新建→有序交叉诊断AT
+app: deepin-voice-note
+description: 普通段落建文与格式继承对照，真实鼠标键盘逐步输入、Enter/Tab搭建三级，检查字内样式和逐行视觉状态。
+module: 列表门禁
+tags:
+- gate
+- discovery
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: richtext_plain_enter_and_list_conversion
+  name: 普通段落先设置格式→回车→转换待办→二三级新建→有序交叉诊断AT
+  tags:
+  - gate
+  - real-input
+  - richtext
+  - mixed
+  - task
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 300
+  - action: keyboard_press
+    key: backspace
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 240
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-format-cross-check.js
+    wait_after: 240
+  - action: keyboard_type
+    text: Intro
+    wait_after: 300
+  - action: keyboard_press
+    key: home
+    wait_after: 300
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bold]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: window.__plainBack=document.querySelector('[data-panel=backColor] button:nth-child(2)').dataset.color;true
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-color-menu=backColor]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: '[data-panel=backColor] button:nth-child(2)'
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("plain_first_styled",[["Intro", "plain", 0, null, null]])
+    wait_after: 260
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('intro marked',0,'Intro',{bold:true,highlight:__plainBack})
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 0
+      journey_kind: text
+      offset_x: 3
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: Continue
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("enter_plain_after_styling",[["Intro", "plain", 0, null, null], ["Continue", "plain", 0, null, null]])
+    wait_after: 260
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('ordinary paragraph Enter inherits active marks',1,'Continue',{bold:true,highlight:__plainBack})
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 1
+      journey_kind: text
+      offset_x: 3
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("convert_marked_paragraph_to_task",[["Intro", "plain", 0, null, null], ["Continue", "task", 1, false, null]])
+    wait_after: 260
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('marked line survives plain-to-task',1,'Continue',{bold:true,highlight:__plainBack})
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 1
+      journey_kind: text
+      offset_x: 3
+      button: left
+      event: click
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: Level2
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("enter_and_tab_create_second_level",[["Intro", "plain", 0, null, null], ["Continue", "task", 1, false, null],
+        ["Level2", "task", 2, false, null]])
+    wait_after: 260
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnFormatCross.assert('new task from styled unchecked parent should inherit',2,'Level2',{bold:true,highlight:__plainBack})
+    wait_after: 260
+  - action: keyboard_press
+    key: end
+    wait_after: 300
+  - action: keyboard_press
+    key: return
+    wait_after: 300
+  - action: keyboard_type
+    text: Level3
+    wait_after: 300
+  - action: keyboard_press
+    key: tab
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("enter_and_tab_create_third_level",[["Intro", "plain", 0, null, null], ["Continue", "task", 1, false, null],
+        ["Level2", "task", 2, false, null], ["Level3", "task", 3, false, null]])
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      journey_index: 3
+      journey_kind: text
+      offset_x: 3
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("third_to_ordered_preserves_above_plain",[["Intro", "plain", 0, null, null], ["Continue", "task", 1, false,
+        null], ["Level2", "task", 2, false, null], ["Level3", "ordered", 3, null, 1]])
+    wait_after: 260

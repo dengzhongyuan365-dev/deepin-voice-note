@@ -15,8 +15,9 @@ import test from 'node:test'
 import { Window } from 'happy-dom'
 import { Editor } from '@tiptap/core'
 
+import { closeHistory } from '@tiptap/pm/history'
 import { createTiptapExtensions } from '../src/runtime/tiptap-extensions.js'
-import { liftActiveListItem, sinkActiveListItem } from '../src/runtime/list-behavior.js'
+import { liftActiveListItem, sinkActiveListItem, switchSelectedListType } from '../src/runtime/list-behavior.js'
 import { orderedListMarkerNumbers } from '../src/runtime/normal-list-markers.js'
 
 function defineGlobal(name, value) {
@@ -652,15 +653,12 @@ test('方案A：多级阶梯连按 Shift+Tab 必须逐级降到底、不丢项�
   assert.equal(problems.length, 0, `阶梯反缩进失败 ${problems.length} 例：\n${problems.join('\n')}`)
 })
 
-// ---- B04 回归：一级唯一项绝不"凭空缩进"，和它在文档里的位置无关 -----------
+// ---- 视觉游离项：一级首项也可 Tab，二级/三级不要求存在结构父项 -----------
 //
-// 回归背景（2026-10-16 用户反馈）：选中图片 → 转成列表 → 一级项居然能 Tab，
-// 但"单独开一个文档"有时又复现不出来。原因是 canUseExtraIndent() 里有一条
-// isDetachedTopLevelListItem() 启发式 —— 它把"顶层列表首项 + 文档里它前面还有
-// 别的块"一律当成 Shift+Tab 拆出来的游离项，于是同一条操作会因为"列表前面有
-// 没有内容"而表现不同。正确判据只有两条：已经在二级/三级，或该项自身带
-// dvnIndentLevel（游离子树把视觉层级存在属性里）。
-test('B04：一级唯一项无论在文档哪个位置，Tab 都不得产生悬空缩进', () => {
+// 用户确认的模型：视觉层级允许游离项，唯一硬限制是最深三级。首项从一级
+// Tab 到二级、再到三级，不能因为“没有前一个兄弟项”而拒绝；超过三级后再按
+// Tab 保持三级，Shift+Tab 则逐级回收。
+test('一级唯一项可成为游离二/三级，且三级封顶、可逐级反缩进', () => {
   const window = setupDom()
   const cases = [
     { name: '列表是文档第一块', content: [{ type: 'paragraph', content: [{ type: 'text', text: '唯一的图片行' }] }] },
@@ -685,42 +683,70 @@ test('B04：一级唯一项无论在文档哪个位置，Tab 都不得产生悬�
   for (const spec of cases) {
     for (const listType of ['bulletList', 'orderedList', 'taskList']) {
       const editor = createEditor(window, { type: 'doc', content: spec.content })
-      // 把"唯一的图片行"那段整体转成列表（等价于选中图片后点列表按钮）
       const targetPos = findTextRange(editor, '唯一的图片行')
       editor.chain().focus().setTextSelection(targetPos).run()
       const command = `toggle${listType.charAt(0).toUpperCase()}${listType.slice(1)}`
       editor.chain().focus()[command]().run()
-
-      // 产品语义：文本选区上按 Tab 会替换为纯文本空格；B04 校验的是空光标
-      // 对一级列表项的缩进行为，因此转换后把光标收敛到该项行首。
       editor.chain().focus().setTextSelection(findTextRange(editor, '唯一的图片行').from).run()
 
-      const beforeBlocks = enumerateDocBlocks(editor.state.doc)
-      const item = beforeBlocks.find((block) => block.blockKind === 'item' && block.text === '唯一的图片行')
-      if (!item) {
-        problems.push(`[${spec.name}/${listType}] 转列表失败，没找到列表项`)
-        editor.destroy()
-        continue
+      const level = () => {
+        const entry = enumerateDocBlocks(editor.state.doc)
+          .find((block) => block.blockKind === 'item' && block.text === '唯一的图片行')
+        return entry?.visualDepth
       }
-      if (item.visualDepth !== 1) {
-        problems.push(`[${spec.name}/${listType}] 转列表后应是视觉一级，实际 ${item.visualDepth}`)
+      if (level() !== 1) problems.push(`[${spec.name}/${listType}] 转列表后应是视觉一级，实际 ${level()}`)
+      for (const expected of [2, 3, 3]) {
+        const event = dispatchTab(editor, window, false)
+        if (!event.defaultPrevented) problems.push(`[${spec.name}/${listType}] Tab 未被处理`)
+        if (level() !== expected) {
+          problems.push(`[${spec.name}/${listType}] Tab 后应为视觉 ${expected}，实际 ${level()}`)
+        }
       }
-
-      const event = dispatchTab(editor, window, false)
-      const after = enumerateDocBlocks(editor.state.doc)
-      const afterItem = after.find((block) => block.blockKind === 'item' && block.text === '唯一的图片行')
-      if (event.defaultPrevented && afterItem && afterItem.visualDepth !== 1) {
-        problems.push(
-          `[${spec.name}/${listType}] 一级唯一项被 Tab 悬空缩进到视觉 ${afterItem.visualDepth}`,
-        )
-      }
-      if (!afterItem || afterItem.visualDepth !== 1) {
-        problems.push(`[${spec.name}/${listType}] Tab 后该行视觉层级变成 ${afterItem ? afterItem.visualDepth : '丢失'}`)
+      for (const expected of [2, 1]) {
+        const event = dispatchTab(editor, window, true)
+        if (!event.defaultPrevented) problems.push(`[${spec.name}/${listType}] Shift+Tab 未被处理`)
+        if (level() !== expected) {
+          problems.push(`[${spec.name}/${listType}] Shift+Tab 后应为视觉 ${expected}，实际 ${level()}`)
+        }
       }
       editor.destroy()
     }
   }
-  assert.equal(problems.length, 0, `一级唯一项悬空缩进 ${problems.length} 例：\n${problems.join('\n')}`)
+  assert.equal(problems.length, 0, `游离项缩进回归失败 ${problems.length} 例：\n${problems.join('\n')}`)
+})
+
+// 范围选区 Tab：ProseMirror sinkListItem 对同一列表的范围只处理首项，
+// 用户选中 B/C/D 后按 Tab 时三项必须一起下沉一级，未选中的 A/E 不能动。
+test('选中连续一级兄弟 B/C/D 后 Tab，三项一起缩进且选区保持', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('bulletList', ['A', 'B', 'C', 'D', 'E'].map((text) => listItem(text)))],
+  })
+  const beforeJSON = editor.getJSON()
+  const b = findTextRange(editor, 'B')
+  const d = findTextRange(editor, 'D')
+  editor.chain().focus().setTextSelection({ from: b.from, to: d.to }).run()
+
+  const event = dispatchTab(editor, window)
+  assert.equal(event.defaultPrevented, true, 'Tab 应由列表范围缩进处理')
+
+  const after = enumerateDocBlocks(editor.state.doc)
+  for (const text of ['B', 'C', 'D']) {
+    const item = after.find((block) => block.blockKind === 'item' && block.text === text)
+    assert.ok(item, `${text} 不应丢失`)
+    assert.equal(item.visualDepth, 2, `${text} 应缩进到二级`)
+  }
+  for (const text of ['A', 'E']) {
+    const item = after.find((block) => block.blockKind === 'item' && block.text === text)
+    assert.equal(item.visualDepth, 1, `未选中的 ${text} 必须保持一级`)
+  }
+  assert.equal(editor.state.selection.empty, false, '缩进后 B/C/D 选区必须保持')
+
+  assert.equal(liftActiveListItem(editor), true, 'Shift+Tab 应由列表范围反缩进处理')
+  assert.deepEqual(editor.getJSON(), beforeJSON, '反缩进后应精确恢复初始结构')
+  assert.equal(editor.state.selection.empty, false, '反缩进后选区仍应覆盖 B/C/D')
+  editor.destroy()
 })
 
 // 反向保证：反缩进把子列表拆成新的顶层列表块后，靠 dvnIndentLevel 仍能 Tab 回到二级。
@@ -1225,20 +1251,507 @@ test('图片 NodeSelection 在 Tab / Shift+Tab 后保持选中，三种列表全
   assert.equal(problems.length, 0, `图片列表选中态回归失败：\n${problems.join('\n')}`)
 })
 
-// 一级唯一图片项按 Tab 不能悬空缩进；即使列表逻辑处理了按键，图片选中态也不能丢。
-test('图片是列表首项时 Tab 不悬空，且选中态保持', () => {
+// 图片项同样可以成为视觉游离项；列表操作后 NodeSelection 不能丢。
+test('图片是列表首项时可缩进为游离项，且选中态保持', () => {
   const window = setupDom()
   const editor = createEditor(window, imageListDoc('bulletList', ['images/only.png']))
   selectImage(editor, 'images/only.png')
 
   const event = dispatchTab(editor, window, false)
-  assert.equal(event.defaultPrevented, true, '一级唯一项 Tab 应被列表逻辑接管但不改变结构')
+  assert.equal(event.defaultPrevented, true, '一级唯一项 Tab 应被列表逻辑接管')
   assert.equal(editor.state.selection.node?.type.name, 'image', 'Tab 后图片 NodeSelection 应保持')
-  assert.equal(selectedImageVisualDepth(editor), 1, '一级唯一图片项不得悬空缩进')
+  assert.equal(selectedImageVisualDepth(editor), 2, '一级唯一图片项应成为视觉二级游离项')
+  editor.destroy()
+})
+
+// ---- 游离项专项：有序编号 + 待办勾选联动 -------------------------------
+//
+// 用户确认允许“无父项的二/三级项”后，有序列表和待办列表不能只看结构树：
+// 有序编号按视觉层级连续；待办级联按视觉父子关系，不能把视觉上更浅的
+// 结构后代误当成子项。
+function visualLevelOf(snapshot, text) {
+  const item = snapshot.find((entry) => entry.text === text)
+  return item ? item.structuralDepth + item.indentLevel + 1 : null
+}
+
+test('有序列表游离项：单点逐级缩进、多选各升一级、编号始终连续', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('orderedList', 'ABCDEFGHIJKL'.split('').map((text) => listItem(text)))],
+  })
+  const snap = () => listItemSnapshots(editor.state.doc)
+  const tabAt = (text) => {
+    editor.chain().focus().setTextSelection(findTextRange(editor, text).from).run()
+    return dispatchTab(editor, window, false)
+  }
+
+  // A 首次成为一级列表中的游离二级项，再次成为游离三级项。
+  // 后面的 B/C/D 仍必须各只升一级，不能复制 A 的三级缩进。
+  assert.equal(tabAt('A').defaultPrevented, true)
+  assert.equal(visualLevelOf(snap(), 'A'), 2)
+  assert.equal(tabAt('A').defaultPrevented, true)
+  assert.equal(visualLevelOf(snap(), 'A'), 3)
+  for (const text of ['B', 'C', 'D']) {
+    assert.equal(tabAt(text).defaultPrevented, true)
+    assert.equal(visualLevelOf(snap(), text), 2)
+  }
+  assert.deepEqual(
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+      .map((text) => visualLevelOf(snap(), text)),
+    [3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+  )
+
+  const numberOf = () => {
+    const expected = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+    const actual = Array.from(editor.view.dom.querySelectorAll('li'))
+      .map((item) => Number((item.style.getPropertyValue('--dvn-list-number') || '').replace(/"/g, '')))
+    assert.deepEqual(actual, [1, 1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8])
+    return true
+  }
+  assert.equal(numberOf(), true, 'A 是三级孤立组从 1 开始，B-D 二级组从 1 连续到 3，E-L 根级从 1 连续到 8')
+
+  // A-D 多选 Tab：A 已在三级保持，B/C/D 各升一级到三级；不得出现跳级。
+  let from = findTextRange(editor, 'A').from
+  let to = findTextRange(editor, 'D').to
+  editor.chain().focus().setTextSelection({ from, to }).run()
+  assert.equal(dispatchTab(editor, window, false).defaultPrevented, true)
+  assert.deepEqual(
+    ['A', 'B', 'C', 'D'].map((text) => visualLevelOf(snap(), text)),
+    [3, 3, 3, 3],
+  )
+
+  // Shift+Tab 后 A-D 全部回到二级，仍可作为游离项存在；编号继续 1..4。
+  from = findTextRange(editor, 'A').from
+  to = findTextRange(editor, 'D').to
+  editor.chain().focus().setTextSelection({ from, to }).run()
+  assert.equal(dispatchTab(editor, window, true).defaultPrevented, true)
+  assert.deepEqual(
+    ['A', 'B', 'C', 'D'].map((text) => visualLevelOf(snap(), text)),
+    [2, 2, 2, 2],
+  )
+  assert.deepEqual(
+    Array.from(editor.view.dom.querySelectorAll('li'))
+      .slice(0, 4)
+      .map((item) => Number((item.style.getPropertyValue('--dvn-list-number') || '').replace(/"/g, ''))),
+    [1, 2, 3, 4],
+  )
+
+  // 再 Shift+Tab 回到一级；全文 12 项根编号连续 1..12。
+  editor.chain().focus().setTextSelection({
+    from: findTextRange(editor, 'A').from,
+    to: findTextRange(editor, 'D').to,
+  }).run()
+  assert.equal(dispatchTab(editor, window, true).defaultPrevented, true)
+  assert.deepEqual(
+    Array.from(editor.view.dom.querySelectorAll('li'))
+      .map((item) => Number((item.style.getPropertyValue('--dvn-list-number') || '').replace(/"/g, ''))),
+    Array.from({ length: 12 }, (_, index) => index + 1),
+  )
+  editor.destroy()
+})
+
+test('待办游离项：勾选只级联视觉子项，多选 Tab/Shift+Tab 与 Undo/Redo 保状态', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', 'ABCDEFGHIJKL'.split('').map((text) => taskItem(text)))],
+  })
+  const snap = () => listItemSnapshots(editor.state.doc)
+  const levels = () => Object.fromEntries(snap().map((item) => [item.text, item.structuralDepth + item.indentLevel + 1]))
+  const checked = () => Object.fromEntries(snap().map((item) => [item.text, Boolean(item.checked)]))
+  const tabAt = (text, times = 1) => {
+    for (let index = 0; index < times; index += 1) {
+      editor.chain().focus().setTextSelection(findTextRange(editor, text).from).run()
+      dispatchTab(editor, window, false)
+    }
+  }
+  const check = (text) => {
+    editor.chain().focus()
+      .setTextSelection(findTextRange(editor, text).from)
+      .setTaskChecked(true)
+      .run()
+  }
+
+  // A 是视觉三级游离项；B/C 和 E/F 是视觉父子对，D 是视觉二级游离项。
+  tabAt('A', 2)
+  tabAt('B', 1)
+  tabAt('C', 2)
+  tabAt('D', 1)
+  tabAt('E', 1)
+  tabAt('F', 2)
+  assert.deepEqual(levels(), {
+    A: 3, B: 2, C: 3, D: 2, E: 2, F: 3,
+    G: 1, H: 1, I: 1, J: 1, K: 1, L: 1,
+  })
+
+  check('A')
+  assert.deepEqual(checked(), {
+    A: true, B: false, C: false, D: false, E: false, F: false,
+    G: false, H: false, I: false, J: false, K: false, L: false,
+  }, '勾选视觉三级游离项不能联动结构上更浅的 B/C/D')
+
+  check('B')
+  assert.equal(checked().B, true)
+  assert.equal(checked().C, true, 'B 的视觉三级子项 C 应随 B 勾选')
+  assert.equal(checked().D, false, '同级/更浅的 D 不能被 B 联动')
+
+  check('D')
+  assert.equal(checked().D, true)
+  assert.equal(checked().E, false, 'D 与 E 同为视觉二级，D 不能联动 E')
+
+  check('E')
+  assert.equal(checked().E, true)
+  assert.equal(checked().F, true, 'E 的视觉三级子项 F 应随 E 勾选')
+  const checkedBeforeIndent = checked()
+
+  const selectBF = () => editor.chain().focus().setTextSelection({
+    from: findTextRange(editor, 'B').from,
+    to: findTextRange(editor, 'F').to,
+  }).run()
+  selectBF()
+  assert.equal(dispatchTab(editor, window, true).defaultPrevented, true)
+  assert.deepEqual(
+    ['B', 'C', 'D', 'E', 'F'].map((text) => levels()[text]),
+    [1, 2, 1, 1, 2],
+  )
+  assert.deepEqual(checked(), checkedBeforeIndent, 'Shift+Tab 不能改变勾选状态')
+
+  // 单测同步执行时 History 会把相邻按键并成一组；真实 AT 有等待不会这样。
+  // 显式关闭上一组，保证这里验证的 Undo 只回退本次批量 Tab。
+  editor.view.dispatch(closeHistory(editor.state.tr))
+  selectBF()
+  assert.equal(dispatchTab(editor, window, false).defaultPrevented, true)
+  assert.deepEqual(
+    ['B', 'C', 'D', 'E', 'F'].map((text) => levels()[text]),
+    [2, 3, 2, 2, 3],
+  )
+  assert.deepEqual(checked(), checkedBeforeIndent, '批量 Tab 不能改变勾选状态')
+
+  assert.equal(editor.commands.undo(), true)
+  assert.deepEqual(
+    ['B', 'C', 'D', 'E', 'F'].map((text) => levels()[text]),
+    [1, 2, 1, 1, 2],
+  )
+  assert.deepEqual(checked(), checkedBeforeIndent, 'Undo 后层级和勾选状态都要恢复')
+  assert.equal(editor.commands.redo(), true)
+  assert.deepEqual(
+    ['B', 'C', 'D', 'E', 'F'].map((text) => levels()[text]),
+    [2, 3, 2, 2, 3],
+  )
+  assert.deepEqual(checked(), checkedBeforeIndent)
+  editor.destroy()
+})
+
+test('待办跳级视觉父子：A(1)->B(3)->C(2)->D(3) 中 B/C 都是 A 的直接子项', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', 'ABCDEFGHIJKL'.split('').map((text) => taskItem(text)))],
+  })
+  const snap = () => listItemSnapshots(editor.state.doc)
+  const levels = () => Object.fromEntries(snap().map((item) => [item.text, item.structuralDepth + item.indentLevel + 1]))
+  const checked = () => Object.fromEntries(snap().map((item) => [item.text, Boolean(item.checked)]))
+  const tabAt = (text, times = 1) => {
+    for (let index = 0; index < times; index += 1) {
+      editor.chain().focus().setTextSelection(findTextRange(editor, text).from).run()
+      dispatchTab(editor, window, false)
+    }
+  }
+  const check = (text, value) => {
+    editor.chain().focus()
+      .setTextSelection(findTextRange(editor, text).from)
+      .setTaskChecked(value)
+      .run()
+  }
+
+  tabAt('B', 2)
+  tabAt('C', 1)
+  tabAt('D', 2)
+  assert.deepEqual(
+    ['A', 'B', 'C', 'D', 'E'].map((text) => levels()[text]),
+    [1, 3, 2, 3, 1],
+  )
+
+  // C/D 完成只代表 A 的一个分支；B 仍是 A 的直接视觉子项且未完成，
+  // 因此 A 不能提前变成完成态。
+  check('C', true)
+  assert.deepEqual(checked(), {
+    A: false, B: false, C: true, D: true, E: false,
+    F: false, G: false, H: false, I: false, J: false, K: false, L: false,
+  })
+
+  check('B', true)
+  assert.equal(checked().A, true, 'B/C/D 三个视觉子项全部完成后 A 才完成')
+
+  check('C', false)
+  assert.equal(checked().A, false, '取消 C 后 A 必须重新变为未完成')
+  editor.destroy()
+})
+
+test('待办父项级联勾选后 Undo 只回退本次操作，不回退之前的子项勾选', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', 'ABCDE'.split('').map((text) => taskItem(text)))],
+  })
+  const snap = () => listItemSnapshots(editor.state.doc)
+  const checked = () => Object.fromEntries(snap().map((item) => [item.text, Boolean(item.checked)]))
+  const tabAt = (text, times = 1) => {
+    for (let index = 0; index < times; index += 1) {
+      editor.chain().focus().setTextSelection(findTextRange(editor, text).from).run()
+      dispatchTab(editor, window, false)
+    }
+  }
+  const setChecked = (text, value) => {
+    editor.chain().focus()
+      .setTextSelection(findTextRange(editor, text).from)
+      .setTaskChecked(value)
+      .run()
+  }
+
+  tabAt('B', 1)
+  tabAt('C', 2)
+  tabAt('D', 2)
+
+  setChecked('C', true)
+  assert.deepEqual(checked(), { A: false, B: false, C: true, D: false, E: false })
+  editor.view.dispatch(closeHistory(editor.state.tr))
+  setChecked('B', true)
+  assert.deepEqual(checked(), { A: true, B: true, C: true, D: true, E: false })
+
+  // Undo 的 B:true -> false 不能被级联插件解释成“手动取消父项”，
+  // 否则 C/D 会被一起取消。
+  assert.equal(editor.commands.undo(), true)
+  assert.deepEqual(
+    checked(),
+    { A: false, B: false, C: true, D: false, E: false },
+    'Undo 只应回退 B 及本次级联，C 的历史勾选必须保留',
+  )
+
+  assert.equal(editor.commands.redo(), true)
+  assert.deepEqual(checked(), { A: true, B: true, C: true, D: true, E: false })
+  editor.destroy()
+})
+
+test('待办父子转有序再转回待办：新子项未勾选时父项必须重新变为未完成', () => {
+  const window = setupDom()
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', 'ABCDE'.split('').map((text) => taskItem(text)))],
+  })
+
+  for (const text of ['B', 'C', 'D']) {
+    editor.chain().focus().setTextSelection(findTextRange(editor, text).from).run()
+    dispatchTab(editor, window, false)
+  }
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'A').from).run()
+  editor.commands.setTaskChecked(true)
+  assert.deepEqual(
+    listItemSnapshots(editor.state.doc).map((item) => [item.text, Boolean(item.checked)]),
+    [['A', true], ['B', true], ['C', true], ['D', true], ['E', false]],
+  )
+
+  editor.chain().focus().setTextSelection({
+    from: findTextRange(editor, 'B').from,
+    to: findTextRange(editor, 'D').to,
+  }).run()
+  assert.equal(switchSelectedListType(editor, 'orderedList'), true)
+  assert.equal(switchSelectedListType(editor, 'taskList'), true)
+
+  const converted = listItemSnapshots(editor.state.doc)
+  assert.deepEqual(
+    converted.filter((item) => 'ABCD'.includes(item.text)).map((item) => [item.text, Boolean(item.checked)]),
+    [['A', false], ['B', false], ['C', false], ['D', false]],
+    '转回待办后 A/B/C/D 都应未勾选',
+  )
+  editor.destroy()
+})
+
+test('待办 A 行尾 Enter：视觉同级但结构子项的 C 不能被误判取消勾选', () => {
+  const window = setupDom()
+  const checkedTask = (text, extra = [], indentLevel = 0, checked = true) => ({
+    type: 'taskItem',
+    attrs: { checked, dvnIndentLevel: indentLevel },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }, ...extra],
+  })
+  const c = checkedTask('C', [
+    list('taskList', [checkedTask('K', [], 0, true)]),
+    list('orderedList', [listItem('X', [], 0)]),
+  ], 0, true)
+  const a = checkedTask('A', [
+    list('taskList', [checkedTask('B', [], 1, true), c]),
+  ], 1, true)
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', [
+      a,
+      checkedTask('D', [], 1, true),
+      checkedTask('E', [], 0, false),
+    ])],
+  })
+
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'A').to).run()
+  const event = new window.KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    cancelable: true,
+  })
+  editor.view.dom.dispatchEvent(event)
+
+  const after = listItemSnapshots(editor.state.doc)
+  const checked = Object.fromEntries(after.map((item) => [item.text, Boolean(item.checked)]))
+  assert.equal(checked.B, true, 'B 不能因为位置平移被取消')
+  assert.equal(checked.C, true, 'C 不能因为位置平移被取消')
+  assert.equal(checked.K, true, 'C 的子项 K 不能联动取消')
+  assert.equal(checked.D, true, 'D 不能受影响')
+  const blank = after.find((item) => item.text === '')
+  assert.equal(Boolean(blank?.checked), true, '新待办已有全部完成的视觉子项 B，应同步完成；不能按新建一律跳过')
+  assert.equal(after.map((item) => item.text).join('|'), 'A||B|C|K|X|D|E')
+  editor.destroy()
+})
+
+test('点击视觉二级 R：只联动其视觉子项 B，不能跨过同级 C 联动 C/K', () => {
+  const window = setupDom()
+  const checkedTask = (text, extra = [], indentLevel = 0, checked = false) => ({
+    type: 'taskItem',
+    attrs: { checked, dvnIndentLevel: indentLevel },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }, ...extra],
+  })
+  const c = checkedTask('C', [
+    list('taskList', [checkedTask('K', [], 0, false)]),
+    list('orderedList', [listItem('X', [], 0)]),
+  ], 0, false)
+  const r = checkedTask('R', [
+    list('taskList', [checkedTask('B', [], 1, false), c]),
+  ], 1, false)
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', [
+      checkedTask('A', [], 1, true),
+      r,
+      checkedTask('D', [], 1, true),
+      checkedTask('E', [], 0, false),
+    ])],
+  })
+
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'R').from).run()
+  editor.commands.setTaskChecked(true)
+
+  const after = listItemSnapshots(editor.state.doc)
+  const checked = Object.fromEntries(after.map((item) => [item.text, Boolean(item.checked)]))
+  assert.equal(checked.R, true)
+  assert.equal(checked.B, true, 'B 是 R 的视觉子项，应联动')
+  assert.equal(checked.C, false, 'C 与 R 视觉同级，不能联动')
+  assert.equal(checked.K, false, 'K 属于 C，不能跨过 C 联动')
+  assert.equal(checked.D, true, 'D 不受影响')
+  editor.destroy()
+})
+
+test('A Shift+Tab 后 R/C/D 变为视觉子项：C 未勾选时 A 必须取消勾选', () => {
+  const window = setupDom()
+  const item = (text, extra = [], indentLevel = 0, checked = false) => ({
+    type: 'taskItem',
+    attrs: { checked, dvnIndentLevel: indentLevel },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }, ...extra],
+  })
+  const a = item('A', [
+    list('taskList', [
+      item('R', [list('taskList', [item('B', [], 0, true)])], 0, true),
+      item('C', [
+        list('taskList', [item('大', [], 0, false)]),
+        list('orderedList', [listItem('X', [], 0)]),
+      ], 0, false),
+      item('D', [], 0, true),
+    ]),
+  ], 1, true)
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', [a, item('E', [], 0, false)])],
+  })
+
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'A').from).run()
+  const event = dispatchTab(editor, window, true)
+  assert.equal(event.defaultPrevented, true)
+
+  const after = listItemSnapshots(editor.state.doc)
+  const levels = Object.fromEntries(after.map((entry) => [entry.text, entry.structuralDepth + entry.indentLevel + 1]))
+  const checked = Object.fromEntries(after.map((entry) => [entry.text, Boolean(entry.checked)]))
+  assert.deepEqual(levels, { A: 1, R: 2, B: 3, C: 2, 大: 3, X: 3, D: 2, E: 1 })
+  assert.equal(checked.A, false, 'C 未勾选，A 不能继续显示已勾选')
+  assert.equal(checked.C, false, 'C 的勾选状态不能被改变')
+  assert.equal(checked.大, false, 'C 的子项不能联动')
+  assert.equal(checked.R, true)
+  assert.equal(checked.D, true)
+  editor.destroy()
+})
+
+test('A 连续 Shift+Tab 成为未完成父项后，Tab 回同级不能重新勾选 A', () => {
+  const window = setupDom()
+  const item = (text, indentLevel, checked) => ({
+    type: 'taskItem',
+    attrs: { checked, dvnIndentLevel: indentLevel },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+  })
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', [
+      item('A', 2, true),
+      item('B', 1, false),
+    ])],
+  })
+  const checked = () => Object.fromEntries(listItemSnapshots(editor.state.doc).map((entry) => [entry.text, Boolean(entry.checked)]))
+  const levels = () => Object.fromEntries(listItemSnapshots(editor.state.doc).map((entry) => [entry.text, entry.structuralDepth + entry.indentLevel + 1]))
+
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'A').from).run()
+  assert.equal(dispatchTab(editor, window, true).defaultPrevented, true)
+  assert.equal(dispatchTab(editor, window, true).defaultPrevented, true)
+  assert.deepEqual(levels(), { A: 1, B: 2 })
+  assert.deepEqual(checked(), { A: false, B: false }, 'A 成为未完成 B 的父项后必须取消勾选')
+
+  assert.equal(dispatchTab(editor, window, false).defaultPrevented, true)
+  assert.deepEqual(levels(), { A: 2, B: 2 }, 'Tab 后 A/B 应回到同一视觉层级')
+  assert.deepEqual(checked(), { A: false, B: false }, 'A 变成叶子项后不能恢复历史勾选状态')
   editor.destroy()
 })
 
 // ---- 全部组合在模块加载期跑完，这里统一汇报。一次跑出所有坏组合，而不是只报第一个。
 test('list indent/outdent matrix', () => {
   assert.equal(FAILURES.length, 0, `矩阵失败 ${FAILURES.length} 例：\n${FAILURES.join('\n')}`)
+})
+
+test('DAS 无序父项 Shift+Tab 只移动自身，所有子任务保持原视觉层级', () => {
+  const window = setupDom()
+  const item = (type, text, children = [], indent = 0, checked = false) => ({
+    type: type === 'taskList' ? 'taskItem' : 'listItem',
+    attrs: type === 'taskList' ? { dvnIndentLevel: indent, checked } : { dvnIndentLevel: indent },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }, ...children],
+  })
+  const list = (type, items) => ({ type, attrs: type === 'orderedList' ? { start: 1 } : {}, content: items })
+  const editor = createEditor(window, {
+    type: 'doc',
+    content: [list('taskList', [item('taskList', 'PRE', [
+      list('bulletList', [item('bulletList', 'DSA', [
+        list('taskList', [
+          item('taskList', 'DASD', [list('taskList', [item('taskList', 'DASDDASDAS', [], 0, true)])], 0, true),
+          item('bulletList', 'DAS', [list('taskList', [
+            item('taskList', 'DASDASDS', [], 0, true),
+            item('taskList', 'WDSADSA', [], 0, true),
+            item('taskList', 'EDSS', [], 0, true),
+          ])]),
+          item('taskList', 'R'),
+        ]),
+      ])]),
+      list('bulletList', [item('bulletList', 'F'), item('bulletList', 'G'), item('bulletList', 'H'), item('bulletList', 'I')]),
+    ]), item('taskList', 'J')])],
+  })
+  const levels = () => Object.fromEntries(listItemSnapshots(editor.state.doc).map((entry) => [entry.text, entry.structuralDepth + entry.indentLevel]))
+  editor.chain().focus().setTextSelection(findTextRange(editor, 'DAS').from).run()
+  liftActiveListItem(editor)
+  assert.deepEqual(levels(), {
+    PRE: 0, DSA: 1, DASD: 2, DASDDASDAS: 3,
+    DAS: 1, DASDASDS: 3, WDSADSA: 3, EDSS: 3, R: 2,
+    F: 1, G: 1, H: 1, I: 1, J: 0,
+  }, 'DAS 只降一级，子任务的绝对视觉层级不能被一起带走')
+  editor.destroy()
 })

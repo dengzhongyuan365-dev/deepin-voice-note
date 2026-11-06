@@ -1,0 +1,117 @@
+name: 扁平视觉任务树局部转无序：13 节点层级/勾选/UndoRedo 门禁
+app: deepin-voice-note
+description: DSA 位于 13 节点扁平视觉任务树中，局部转无序后 DSA 及所有后续视觉后代层级、文字顺序、勾选状态保持不变；Undo/Redo 精确往返。
+module: 列表门禁
+tags:
+- gate
+- discovery
+- real-input
+- task
+- convert
+- visual-depth
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: task_partial_convert_flat_visual_tree
+  name: DSA 局部转无序后 13 节点视觉层级不漂移
+  tags:
+  - gate
+  - real-input
+  - task
+  - convert
+  - visual-depth
+  steps:
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: 'window.__dvnTiptapEditor.commands.setContent({"type": "doc", "content": [{"type": "taskList", "content": [{"type": "taskItem", "attrs": {"checked":
+        true, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "PRE"}]}]}, {"type": "taskItem", "attrs": {"checked":
+        false, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSA"}]}]}, {"type": "taskItem", "attrs": {"checked":
+        false, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DASD"}]}]}, {"type": "taskItem", "attrs": {"checked":
+        false, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DSADSADAS"}]}]}, {"type": "taskItem", "attrs":
+        {"checked": true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DAS"}]}]}, {"type": "taskItem",
+        "attrs": {"checked": true, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "DASDASDS"}]}]}, {"type":
+        "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "WDSADSA"}]}]},
+        {"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 2}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "EDSS"}]}]},
+        {"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 1}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "R"}]}]},
+        {"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "T"}]}]},
+        {"type": "taskItem", "attrs": {"checked": true, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Y"}]}]},
+        {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "U"}]}]},
+        {"type": "taskItem", "attrs": {"checked": false, "dvnIndentLevel": 0}, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "I"}]}]}]}]});
+        true'
+    wait_after: 280
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-user-journey.js
+    wait_after: 220
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("flat_visual_tree_before",[["PRE", "task", 1, true, null], ["DSA", "task", 1, false, null], ["DASD", "task", 2, false,
+        null], ["DSADSADAS", "task", 3, false, null], ["DAS", "task", 2, true, null], ["DASDASDS", "task", 3, true, null], ["WDSADSA", "task", 3, true,
+        null], ["EDSS", "task", 3, true, null], ["R", "task", 2, true, null], ["T", "task", 1, true, null], ["Y", "task", 1, true, null], ["U", "task",
+        1, false, null], ["I", "task", 1, false, null]])
+    wait_after: 260
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      journey_index: 1
+      journey_kind: text
+      offset_x: 3
+    wait_after: 380
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      event: click
+      button: left
+      selector: button[data-format=bulletList]
+    wait_after: 380
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("flat_visual_tree_after_DSA_to_bullet",[["PRE", "task", 1, true, null], ["DSA", "bullet", 1, null, null], ["DASD",
+        "task", 2, false, null], ["DSADSADAS", "task", 3, false, null], ["DAS", "task", 2, true, null], ["DASDASDS", "task", 3, true, null], ["WDSADSA",
+        "task", 3, true, null], ["EDSS", "task", 3, true, null], ["R", "task", 2, true, null], ["T", "task", 1, true, null], ["Y", "task", 1, true, null],
+        ["U", "task", 1, false, null], ["I", "task", 1, false, null]])
+    wait_after: 260
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("flat_visual_tree_undo",[["PRE", "task", 1, true, null], ["DSA", "task", 1, false, null], ["DASD", "task", 2, false,
+        null], ["DSADSADAS", "task", 3, false, null], ["DAS", "task", 2, true, null], ["DASDASDS", "task", 3, true, null], ["WDSADSA", "task", 3, true,
+        null], ["EDSS", "task", 3, true, null], ["R", "task", 2, true, null], ["T", "task", 1, true, null], ["Y", "task", 1, true, null], ["U", "task",
+        1, false, null], ["I", "task", 1, false, null]])
+    wait_after: 260
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 360
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: __dvnJourney.checkpoint("flat_visual_tree_redo",[["PRE", "task", 1, true, null], ["DSA", "bullet", 1, null, null], ["DASD", "task", 2, false,
+        null], ["DSADSADAS", "task", 3, false, null], ["DAS", "task", 2, true, null], ["DASDASDS", "task", 3, true, null], ["WDSADSA", "task", 3, true,
+        null], ["EDSS", "task", 3, true, null], ["R", "task", 2, true, null], ["T", "task", 1, true, null], ["Y", "task", 1, true, null], ["U", "task",
+        1, false, null], ["I", "task", 1, false, null]])
+    wait_after: 260

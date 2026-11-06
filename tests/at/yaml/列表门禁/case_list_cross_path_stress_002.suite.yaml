@@ -1,0 +1,973 @@
+name: 列表跨路径压力门禁二
+app: deepin-voice-note
+description: 双分支转换、新子项历史、三列表混排缩进与统一转换
+module: 列表门禁
+tags:
+- gate
+- stress
+- list
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: stress_two_branches_single_branch_conversion
+  name: 双待办分支只转换单分支：父项完成态与 Undo/Redo
+  tags:
+  - gate
+  - stress
+  - task
+  - conversion
+  - checked
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: F
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: G
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: H
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: I
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: J
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: K
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: L
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('C'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('D'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('E'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('F'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('G'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('C'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('D'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('F'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('G'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,B:true,C:true,D:true,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('C'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({B:'taskList',C:'taskList',D:'taskList',E:'taskList',F:'taskList',G:'taskList'}); __dvnVisual.assertChecked({A:false,B:false,C:false,D:false,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({C:'orderedList',D:'orderedList'}); __dvnVisual.assertChecked({A:true,B:true,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({C:'taskList',D:'taskList'}); __dvnVisual.assertChecked({A:false,B:false,C:false,D:false,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('C'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('D'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,B:true,C:true,D:true,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('C'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({C:'taskList'}); __dvnVisual.assertChecked({A:false,B:false,C:false,D:true,E:true,F:true,G:true}); return true; })()
+    wait_after: 250
+
+- id: stress_conversion_new_child_history
+  name: 待办转换后新增子项：父项重算与 Undo/Redo
+  tags:
+  - gate
+  - stress
+  - task
+  - conversion
+  - enter
+  - undo-redo
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: F
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: G
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: H
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: I
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: J
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: K
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: L
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('C'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('D'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 400
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('A'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:false,B:false,C:false,D:false,E:false}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('B'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('C'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('D'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,B:true,C:true,D:true,E:false}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: X
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,B:2,X:2,C:2,D:2}); __dvnVisual.assertChecked({A:false,B:true,X:false,C:true,D:true,E:false}); return true; })()
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('X'); return true; })()
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,B:true,X:true,C:true,D:true,E:false}); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:false,B:true,X:false,C:true,D:true,E:false}); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,B:true,X:true,C:true,D:true,E:false}); return true; })()
+    wait_after: 250
+
+- id: stress_mixed_types_indent_unify_history
+  name: 三种列表混排 Tab/ShiftTab 后统一转有序与历史恢复
+  tags:
+  - gate
+  - stress
+  - ordered
+  - bullet
+  - task
+  - mixed
+  - tab
+  - shift-tab
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_hot_key
+    key: ctrl+a
+    wait_after: 450
+  - action: keyboard_press
+    key: backspace
+    wait_after: 400
+  - action: keyboard_type
+    text: A
+    wait_after: 300
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 500
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: B
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: C
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: D
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: E
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: F
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: G
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: H
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: I
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: J
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: K
+    wait_after: 300
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 550
+  - action: keyboard_type
+    text: L
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('D'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=bulletList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('G'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=taskList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('B'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,B:2,C:2,D:2,E:2,F:2,G:2,H:2,I:1,J:1,K:1,L:1}); __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',C:'orderedList',D:'bulletList',E:'bulletList',F:'bulletList',G:'taskList',H:'taskList',I:'taskList'}); __dvnVisual.assertSelectionText('BCDEFGH'); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,B:1,C:1,D:1,E:1,F:1,G:1,H:1,I:1,J:1,K:1,L:1}); __dvnVisual.assertListTypes({D:'bulletList',E:'bulletList',F:'bulletList',G:'taskList',H:'taskList'}); __dvnVisual.assertSelectionText('BCDEFGH'); return true; })()
+    wait_after: 250
+  - action: keyboard_press
+    key: tab
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: home
+    wait_after: 400
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+down
+    wait_after: 450
+  - action: keyboard_hot_key
+    key: shift+end
+    wait_after: 450
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: button[data-format=orderedList]
+      button: left
+      event: click
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',C:'orderedList',D:'orderedList',E:'orderedList',F:'orderedList',G:'orderedList',H:'orderedList',I:'orderedList',J:'orderedList',K:'orderedList',L:'orderedList'}); __dvnVisual.assertSelectionText('ABCDEFGHIJKL'); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({D:'bulletList',E:'bulletList',F:'bulletList',G:'taskList',H:'taskList',I:'taskList'}); return true; })()
+    wait_after: 250
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertListTypes({A:'orderedList',B:'orderedList',D:'orderedList',G:'orderedList',H:'orderedList',I:'orderedList',L:'orderedList'}); return true; })()
+    wait_after: 250

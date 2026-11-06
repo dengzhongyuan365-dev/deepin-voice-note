@@ -1,0 +1,191 @@
+name: 待办视觉错位完整链门禁
+app: deepin-voice-note
+description: 完整复现截图操作链并用全树一致性校验
+module: 列表门禁
+tags:
+- gate
+- ultimate
+- task
+fast_fail: false
+env_check: []
+setup:
+- action: session_start
+  command: bash -lc 'export QTWEBENGINE_REMOTE_DEBUGGING=7777; exec ./tests/at/setup_voice_note_at.sh'
+  wait: 6.0
+- action: wait
+  wait: 3.0
+teardown:
+- action: session_stop
+suites:
+- id: ultimate_shift_after_enter_chain
+  name: 截图完整链：A Enter→R→勾选R→Shift+Tab A→Tab→Undo/Redo
+  tags:
+  - gate
+  - ultimate
+  - task
+  - enter
+  - checked
+  - shift-tab
+  - undo-redo
+  steps:
+  - action: webengine_mouse_event
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      selector: .ProseMirror
+      button: left
+      event: click
+      offset_x: 10
+    wait_after: 500
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { window.__dvnTiptapEditor.commands.setContent({"type":"doc","content":[{"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":true,"dvnIndentLevel":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"A"}]},{"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":true,"dvnIndentLevel":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"B"}]}]},{"type":"taskItem","attrs":{"checked":false,"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"C"}]},{"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":false,"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"大"}]}]}]},{"type":"orderedList","attrs":{"start":1},"content":[{"type":"listItem","attrs":{"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"X"}]}]}]}]},{"type":"taskItem","attrs":{"checked":true,"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"D"}]}]}]}]},{"type":"taskItem","attrs":{"checked":false,"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"E"}]}]},{"type":"taskItem","attrs":{"checked":false,"dvnIndentLevel":0},"content":[{"type":"paragraph","content":[{"type":"text","text":"S"}]}]}]}]});
+        return true; })()
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script_file: tests/at/js/list-visual-model.js
+    wait_after: 250
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','B','C','大','X','D','E','S']); __dvnVisual.assertLevels({A:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1});
+        __dvnVisual.assertChecked({A:true,B:true,C:false,大:false,D:true,E:false,S:false}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: end
+    wait_after: 400
+  - action: keyboard_press
+    key: return
+    wait_after: 400
+  - action: keyboard_type
+    text: R
+    wait_after: 300
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,R:true,B:true,C:false,大:false,D:true}); __dvnVisual.clickCheckbox('R'); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:true,R:false,B:false,C:false,大:false,D:true}); __dvnVisual.assertTaskConsistency(); __dvnVisual.clickCheckbox('R');
+        return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','R','B','C','大','X','D','E','S']); __dvnVisual.assertChecked({A:true,R:true,B:true,C:false,大:false,D:true,E:false,S:false});
+        __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 800
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','R','B','C','大','X','D','E','S']); __dvnVisual.assertLevels({A:1,R:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1});
+        __dvnVisual.assertChecked({A:false,R:true,B:true,C:false,大:false,D:true,E:false,S:false}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_press
+    key: tab
+    wait_after: 800
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:2,R:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:1,R:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1}); __dvnVisual.assertChecked({A:false,R:true,B:true,C:false,大:false,D:true,E:false,S:false});
+        __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: ctrl+shift+z
+    wait_after: 700
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertLevels({A:2,R:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('大'); return true; })()
+    wait_after: 550
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({C:true,大:true,R:true,B:true,D:true}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('B'); return true; })()
+    wait_after: 550
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertChecked({A:false,R:false,B:false,C:true,大:true,D:true}); __dvnVisual.assertTaskConsistency(); return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.focusItem('A'); return true; })()
+    wait_after: 350
+  - action: keyboard_hot_key
+    key: shift+tab
+    wait_after: 800
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.assertDocumentTextOrder(['A','R','B','C','大','X','D','E','S']); __dvnVisual.assertLevels({A:1,R:2,B:3,C:2,大:3,X:3,D:2,E:1,S:1});
+        __dvnVisual.assertChecked({A:false,R:false,B:false,C:true,大:true,D:true}); __dvnVisual.assertNumbers({X:1}); __dvnVisual.assertTaskConsistency();
+        return true; })()
+    wait_after: 350
+  - action: webengine_eval_js
+    value:
+      port: 7777
+      url_contains: tiptap-editor
+      script: (() => { __dvnVisual.clickCheckbox('B'); return true; })()
+    wait_after: 550
